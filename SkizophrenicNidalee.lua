@@ -1,6 +1,4 @@
 
-
-
 if myHero.charName ~= "Nidalee" then return end
 require 'VPrediction'
 local Cougar = false
@@ -348,28 +346,26 @@ function Keys()
   end
 end
 function AutoUpdater()
-	local host = "https://raw.githubusercontent.com"
-	local file = "/Mr-Skizo/Skizophrenic/master/SkizophrenicNidalee.lua"
-	local file2 = "/Mr-Skizo/Skizophrenic/master/"
+	local UPDATE_HOST = "raw.githubusercontent.com"
+	local UPDATE_PATH = "/Mr-Skizo/Skizophrenic/master/SkizophrenicNidalee.lua"
+	local file2 = "/Mr-Skizo/Skizophrenic/master/Nidalee.version.txt"
+	local UPDATE_FILE_PATH = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
+	local UPDATE_URL = "https://"..UPDATE_HOST..UPDATE_PATH
 	local name = GetCurrentEnv().FILE_NAME
 	local path = SCRIPT_PATH
-	DelayAction(function()
-		local ServerVersionDATA = GetWebResult(host, file2.."Nidalee.version")
-		local ServerVersion = tonumber(ServerVersionDATA)
+	local ServerVersionDATA = GetWebResult(UPDATE_HOST, file2)
+	local ServerVersion = tonumber(ServerVersionDATA)
 		if ServerVersion then
 			if ServerVersion > tonumber(Version) then
-				DL = Download()
 				SendMsg("Updating to version: "..ServerVersion)
-				DL:newDL(host, file, name, path, function()
-					SendMsg("Updated to version: "..ServerVersion..", press 2x F9")
-				end)
+				DelayAction(function() DownloadFile(UPDATE_URL, UPDATE_FILE_PATH, function () SendMsg("Successfully updated. ("..version.." => "..ServerVersion.."), press F9 twice to load the updated version.") end) end, 3)
+				SendMsg("Updated to version: "..ServerVersion..", press 2x F9")
 			else
 				SendMsg("You have the latest version: "..Version)
 			end
 		else
 			SendMsg("Can't connect to Updater Site")
-		end
-	end, 0.85)
+		end	
 end
 function TargetHunted(unit)
  return TargetHaveBuff('nidaleepassivehunted', unit)
