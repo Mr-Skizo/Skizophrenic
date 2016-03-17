@@ -1,10 +1,13 @@
+
+
+
 if myHero.charName ~= "Nidalee" then return end
 require 'VPrediction'
 local Cougar = false
 local Humain = true
 lastAttack = 0
 lastAttackCD = 0
-
+Version = 0.01
 local OrbWalkers = {}
 local LoadedOrb = nil
 local VP = VPrediction()
@@ -44,10 +47,11 @@ function OnLoad()
    	Menu:addTS(ts)
    LoadTableOrbs()
    LoadOrb()
+   AutoUpdater()
    
 end
 function DrawMenu()
-    Menu = scriptConfig("Skizophrenic Nidalee", "SchizoNida")
+    Menu = scriptConfig("Skizophrenic Nidalee", "Skizophrenic")
 	
     Menu:addSubMenu("Combo", "comboM")
 		Menu.comboM:addSubMenu("HumanCombo", "humancombo")
@@ -344,23 +348,23 @@ function Keys()
   end
 end
 function AutoUpdater()
-	local host = "www.scarjit.de"
-	local file = "/HiranN/BoL/Scripts/Lux.lua"
-	local file2 = "/HiranN/BoL/Versions/"
+	local host = "https://raw.githubusercontent.com"
+	local file = "/Mr-Skizo/Skizophrenic/master/SkizophrenicNidalee.lua"
+	local file2 = "/Mr-Skizo/Skizophrenic/master/"
 	local name = GetCurrentEnv().FILE_NAME
 	local path = SCRIPT_PATH
 	DelayAction(function()
-		local ServerVersionDATA = GetWebResult(host, file2.."Lux.version")
+		local ServerVersionDATA = GetWebResult(host, file2.."Nidalee.version")
 		local ServerVersion = tonumber(ServerVersionDATA)
 		if ServerVersion then
-			if ServerVersion > tonumber(self.Version) then
+			if ServerVersion > tonumber(Version) then
 				DL = Download()
 				SendMsg("Updating to version: "..ServerVersion)
 				DL:newDL(host, file, name, path, function()
 					SendMsg("Updated to version: "..ServerVersion..", press 2x F9")
 				end)
 			else
-				SendMsg("You have the latest version: "..self.Version)
+				SendMsg("You have the latest version: "..Version)
 			end
 		else
 			SendMsg("Can't connect to Updater Site")
