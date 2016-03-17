@@ -357,7 +357,7 @@ local UPDATE_PATH = "/Mr-Skizo/Skizophrenic/master/SkizophrenicNidalee.lua".."?r
 local UPDATE_FILE_PATH = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
 local UPDATE_URL = "https://"..UPDATE_HOST..UPDATE_PATH
 function AutoUpdater()
-	local ServerData = GetWebResult(UPDATE_HOST, "/Mr-Skizo/Skizophrenic/master/Nidalee.version")
+	local ServerData = GetWebResult(UPDATE_HOST, "/Mr-Skizo/Skizophrenic/master/Nidalee.version.txt")
 	if ServerData then
 		ServerVersion = type(tonumber(ServerData)) == "number" and tonumber(ServerData) or nil
 		if ServerVersion then
