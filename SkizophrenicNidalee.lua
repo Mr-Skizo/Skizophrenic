@@ -5,7 +5,7 @@ local Cougar = false
 local Humain = true
 lastAttack = 0
 lastAttackCD = 0
-Version = 0.01
+
 local OrbWalkers = {}
 local LoadedOrb = nil
 local VP = VPrediction()
@@ -345,28 +345,37 @@ function Keys()
   if _G.SxOrb.isLastHit then return "Lasthit" end
   end
 end
+---------------------------------------------AUTO AUPDATE -------------------------------------------
+-----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
+local version = "0.01"
+local author = "Mr-Skizo"
+local SCRIPT_NAME = "SkizophrenicNidalee"
+local AUTOUPDATE = true
+local UPDATE_HOST = "raw.githubusercontent.com"
+local UPDATE_PATH = "/Mr-Skizo/Skizophrenic/master/SkizophrenicNidalee.lua".."?rand="..math.random(1,10000)
+local UPDATE_FILE_PATH = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
+local UPDATE_URL = "https://"..UPDATE_HOST..UPDATE_PATH
 function AutoUpdater()
-	local UPDATE_HOST = "raw.githubusercontent.com"
-	local UPDATE_PATH = "/Mr-Skizo/Skizophrenic/master/SkizophrenicNidalee.lua"
-	local file2 = "/Mr-Skizo/Skizophrenic/master/Nidalee.version.txt"
-	local UPDATE_FILE_PATH = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
-	local UPDATE_URL = "https://"..UPDATE_HOST..UPDATE_PATH
-	local name = GetCurrentEnv().FILE_NAME
-	local path = SCRIPT_PATH
-	local ServerVersionDATA = GetWebResult(UPDATE_HOST, file2)
-	local ServerVersion = tonumber(ServerVersionDATA)
+	local ServerData = GetWebResult(UPDATE_HOST, "/Mr-Skizo/Skizophrenic/master/Nidalee.version")
+	if ServerData then
+		ServerVersion = type(tonumber(ServerData)) == "number" and tonumber(ServerData) or nil
 		if ServerVersion then
-			if ServerVersion > tonumber(Version) then
-				SendMsg("Updating to version: "..ServerVersion)
+			if tonumber(version) < ServerVersion then
+				SendMsg("New version available "..ServerVersion)
+				SendMsg(">>Updating, please don't press F9<<")
 				DelayAction(function() DownloadFile(UPDATE_URL, UPDATE_FILE_PATH, function () SendMsg("Successfully updated. ("..version.." => "..ServerVersion.."), press F9 twice to load the updated version.") end) end, 3)
-				SendMsg("Updated to version: "..ServerVersion..", press 2x F9")
+				whatsnew = 1
 			else
-				SendMsg("You have the latest version: "..Version)
+				DelayAction(function() SendMsg("Hello, "..GetUser()..". You got the latest version! :) ("..ServerVersion..")") end, 3)
 			end
+		end
 		else
-			SendMsg("Can't connect to Updater Site")
-		end	
+			SendMsg("Error downloading version info")
+	end
 end
+-----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 function TargetHunted(unit)
  return TargetHaveBuff('nidaleepassivehunted', unit)
 end
