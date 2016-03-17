@@ -180,7 +180,6 @@ function AutoHeal()
 		if Menu.autoH.activeAllyAutoH then 
 			local allys = GetAllyHeroes()
 			for _, h in pairs(allys) do
-				local menuname = "heal" .. h.charName
 				if h and not h.isMe and h.team == myHero.team and h.visible and not h.dead and h.health > 0 and GetDistance(h.pos, myHero.pos) < 600 and h.health < (h.maxHealth * Menu.autoH.hpAlly / 100) then
 					if Menu.autoH[h.charName] and myHero.mana >= (myHero.maxMana * Menu.Mana.AllyHeal / 100) then
 						CastSpell(_E,h)
@@ -357,7 +356,7 @@ local UPDATE_PATH = "/Mr-Skizo/Skizophrenic/master/SkizophrenicNidalee.lua".."?r
 local UPDATE_FILE_PATH = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
 local UPDATE_URL = "https://"..UPDATE_HOST..UPDATE_PATH
 function AutoUpdater()
-	local ServerData = GetWebResult(UPDATE_HOST, "/Mr-Skizo/Skizophrenic/master/Nidalee.version.txt")
+	local ServerData = GetWebResult(UPDATE_HOST, "/Mr-Skizo/Skizophrenic/master/Nidalee.version")
 	if ServerData then
 		ServerVersion = type(tonumber(ServerData)) == "number" and tonumber(ServerData) or nil
 		if ServerVersion then
@@ -484,7 +483,7 @@ function combo()
 				if Eready and ValidTarget(target, 600) and target and GetDistance(target) <= 600 and Menu.comboM.humancombo.usehw then
 					CastRE(target)
 				end
-				if Rready and Menu.comboM.useR and not Qready and not Wready  or GetDistance(target) > 1200 then
+				if Rready and Menu.comboM.useR and not Qready and not Wready  then
 						CastSpell(_R)
 				end
 			else
@@ -505,9 +504,9 @@ function combo()
 						CastSpell(_R)
 					end
 				end
-				if GetDistance(target) > 1200 and Eready then
-					CastSpell(_E)
-				end
+				--if GetDistance(target) > 1200 and Eready then
+					--CastSpell(_E)
+				--end
 				
 				
 			end
