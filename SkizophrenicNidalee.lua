@@ -33,7 +33,7 @@ local CDTracker =
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
 
-local version = 0.02
+local version = 0.03
 local author = "Mr-Skizo"
 local SCRIPT_NAME = "SkizophrenicNidalee"
 local AUTOUPDATE = true
