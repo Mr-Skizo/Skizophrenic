@@ -29,11 +29,13 @@ local CDTracker =
 	RE = 0
 	
 }
+local file = io.open(SCRIPT_PATH .."cc.txt", "w")
+--io.output(file)
 ---------------------------------------------AUTO AUPDATE -------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
 
-local version = 0.03
+local version = 0.04
 local author = "Mr-Skizo"
 local SCRIPT_NAME = "SkizophrenicNidalee"
 local AUTOUPDATE = true
@@ -101,6 +103,11 @@ function OnTick()
    AutoHeal()
    jungleClear()
    MultiformtrackerDraw()
+   if Menu.JumpSystem.jumpK == true then
+		Jump()
+		DrawJumpSpot()
+	end
+   
 end 
 
 function OnDraw()
@@ -126,12 +133,26 @@ function OnDraw()
 		end
 	end
 	MultiformtrackerDraw()	
+	DrawJumpSpot()
 end
 
 function OnUnload()
 	if Cougar then
 		CastSpell(_R)
 	end
+end
+
+function OnProcessSpell (source, spell, enemy)
+-------------------------ONLY FOR DEV PROSSESS ----------
+  --if spell.name == "Pounce" then
+	--file = io.open(SCRIPT_PATH .."cc.txt", "a")
+      --file:write("{"..math.round(myHero.x) .."," ..math.round(myHero.y) ..",".. math.round(myHero.z)..",")
+	  --DelayAction(function() 
+						--file:write(math.round(myHero.x) .."," ..math.round(myHero.y) ..","..math.round(myHero.z) .."},\n")
+						--file:close()
+				--end,1)
+		
+  --end
 end
 
 ---------------------------------------------OrbWalker & Prediction ---------------------------------
@@ -303,12 +324,17 @@ function DrawMenu()
 		Menu.farm.Lfarm:addParam("REinLane","Use Cougar E", SCRIPT_PARAM_ONOFF,true)
 		Menu.farm.Lfarm:addParam("blank", "<------------------>", SCRIPT_PARAM_INFO, " ")
 		Menu.farm.Lfarm:addParam("RinLane","Use R", SCRIPT_PARAM_ONOFF,true)
-   Menu:addSubMenu("Multiformtracker","Multiformtracker")
+   Menu:addSubMenu("Jump System Beta","JumpSystem")
+		Menu.JumpSystem:addParam("AllSpotM", "Draw all spot in Mini Map", SCRIPT_PARAM_ONOFF, false)
+		Menu.JumpSystem:addParam("AllSpot", "Draw all Spot in Mini", SCRIPT_PARAM_ONOFF, false)
+		Menu.JumpSystem:addParam("InRangeSpot", "Draw in range spot", SCRIPT_PARAM_ONOFF, false)
+		Menu.JumpSystem:addParam("jumpK", "Wall Jump", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("W"))
+		
+	Menu:addSubMenu("Multiformtracker","Multiformtracker")
 		Menu.Multiformtracker:addParam("MultiformtrackerOn", "Use Multiformtracker", SCRIPT_PARAM_ONOFF, true)
 		Menu.Multiformtracker:addParam("MultiformtrackerScale", "Multiformtracker Scale", SCRIPT_PARAM_SLICE, 80, 0, 100)
         Menu.Multiformtracker:addParam("MultiformtrackerX", "Multiformtracker x Position", SCRIPT_PARAM_SLICE, 1.897, 0.5, 10, 0.5)
-        Menu.Multiformtracker:addParam("MultiformtrackerZ", "Multiformtracker z Position", SCRIPT_PARAM_SLICE, 1.264, 0.5, 10, 0.5)
-		
+        Menu.Multiformtracker:addParam("MultiformtrackerZ", "Multiformtracker z Position", SCRIPT_PARAM_SLICE, 1.264, 0.5, 10, 0.5)	
    Menu:addSubMenu("Auto Heal", "autoH")
 	 Menu.autoH:addParam("", "<------Self Heal------>", SCRIPT_PARAM_INFO, "")
 	 Menu.autoH:addParam("activeAutoH","Auto heal when low hp", SCRIPT_PARAM_ONOFF,true)
@@ -357,6 +383,7 @@ end
 
 function Checks()
 	ts:update()
+	jungleMinionsPriority()
 	jungleMinions:update()
 	enemyMinions:update()
 	Qready = (myHero:CanUseSpell(_Q) == READY)
@@ -430,6 +457,19 @@ function CastW(unit)
   	end
 end
 
+function jungleMinionsPriority()
+	if(jungleMinions.iCount > 1) then
+		for i, jminion in pairs(jungleMinions.objects) do
+			if(not jminion.name:lower():find("mini")) then
+				local p = jungleMinions.objects[0]
+				jungleMinions.objects[0] = jungleMinions.objects[i]
+				jungleMinions.objects[i] = p
+			end
+			
+		end
+	end
+end
+ 
 function CastRQ(unit)
   	local CastPosition,  HitChance = VP:GetLineCastPosition(unit, VARS.Q.delay, VARS.Q.width, VARS.Q.range, VARS.Q.speed, myHero, true)
   		CastSpell(_Q, CastPosition.x, CastPosition.z)
@@ -595,6 +635,7 @@ function AutoHeal()
 end
 
 function jungleClear()
+
 	if Keys() == "Laneclear" then
 	---------------LANE CLEAR 
 		if Menu.harass.harassILC then
@@ -636,7 +677,7 @@ function jungleClear()
 		for _, jminion in pairs(jungleMinions.objects) do
 			distance = GetDistanceSqr(jminion)
 			
-			if ValidTarget(jminion, 1000) then
+			if ValidTarget(jminion, 1200) then
 				if Qready and Menu.farm.Jfarm.Qinjungle and Humain and myHero.mana >= (myHero.maxMana * Menu.Mana.JungleClear / 100) then
 					CastRQ(jminion)
 				end
@@ -817,6 +858,175 @@ function MultiformtrackerDraw()
 	end
 end
 
+--------------------------------------------- Wall Jump ---------------------------------------------
+-----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
+walls = {{8384,51,2906,8320,52,3276},
+{9370,55,3182,9310,49,2812},
+{9582,49,2826,9724,59,3174},
+{9322,60,3758,9572,-68,4036},
+{9302,-66,4308,9028,53,4082},
+{9038,52,4488,9390,-71,4446},
+{9822,-71,4892,9763,-68,5274},
+{10654,-72,4536,10290,-71,4502},
+{11822,-71,4458,12078,52,4708},
+{11386,-18,5402,11734,53,5300},
+{12060,54,5280,12430,52,5350},
+{12322,57,5808,11946,50,5832},
+{12822,51,5008,13094,52,4752},
+{12916,52,5502,12694,52,5830},
+{12772,52,6258,13156,55,6344},
+{11372,52,7208,11381,52,7624},
+{10786,52,7494,10824,52,7124},
+{10712,52,6904,10342,52,6836},
+{10241,30,6247,10332,-71,5900},
+{8298,-71,6088,8075,52,5759},
+{7938,50,5968,7992,-61,6490},
+{7622,21,6558,7556,52,6180},
+{7116,57,5582,7300,52,5910},
+{11044,62,8154,11162,52,7798},
+{10776,63,8498,10415,62,8629},
+{10222,50,9056,10127,52,9414},
+{9822,50,8756,10039,62,8454},
+{11474,66,8814,11811,51,9078},
+{11872,51,8756,11690,56,8377},
+{11792,54,8112,12074,53,7864},
+{11716,52,9196,11560,52,9536},
+{4624,50,5508,4532,52,5892},
+{3990,52,6374,4163,53,6115},
+{4874,51,6458,5004,51,6106},
+{3274,54,5340,3092,56,5668},
+{2476,53,5614,2516,57,5986},
+{3068,57,6008,3440,52,6076},
+{3124,52,6408,2741,57,6262},
+{2774,57,6658,3066,52,6896},
+{3674,52,6708,3676,50,7084},
+{3518,52,7424,3440,53,7790},
+{6124,52,5608,6198,49,5242},
+{6424,49,5058,6798,49,5102},
+{6674,49,4258,6328,49,4400},
+{6174,52,2708,6194,52,3028},
+{11810,52,4904,11490,-71,4774},
+{8022,52,3508,7900,54,3864},
+{5940,49,4482,6012,49,4608},
+{6024,49,4658,5824,49,4976},
+{1786,53,7234,2054,50,7498},
+{2024,50,7906,2252,52,8204},
+{2024,52,8406,1658,53,8478},
+{1974,53,9406,1976,53,9400},
+{2174,52,9106,1896,53,9384},
+{2024,53,9856,1796,53,10152},
+{2576,52,9408,2922,52,9554},
+{2874,51,9056,2492,52,8958},
+{3214,52,8402,3116,51,8786},
+{3224,51,9506,3540,-52,9684},
+{3374,-65,10056,3120,52,9828},
+{3224,-67,10406,2952,54,10172},
+{3874,52,7706,4026,51,7364},
+{4424,49,8106,4044,51,8046},
+{4558,14,8608,4512,-67,8988},
+{5100,-69,9640,5086,-71,10014},
+{5458,-71,10374,5812,55,10356},
+{5710,57,10862,5380,-71,10744},
+{4474,-71,10406,4104,-71,10350},
+{4122,43,11726,4074,56,12098},
+{4824,56,12206,4580,57,11922},
+{4974,57,11856,5184,56,12166},
+{5474,56,12106,5348,57,11720},
+{5424,57,11206,5230,-71,10908},
+{6074,52,9756,5948,-71,9412},
+{6810,54,11386,6878,56,11016},
+{8072,52,9706,8444,50,9738},
+{8670,50,9600,8708,53,9226},
+{8876,50,10030,8878,51,10434},
+{7224,-0,8156,7252,53,8530},
+{6874,53,8834,6744,-71,8486},
+{6374,-71,8956,6573,35,9286},
+{7502,53,9014,7708,52,9328},
+{8462,50,10476,8145,50,10753},
+{8722,56,12206,8656,56,11890},
+{9854,29,6558,9796,52,6930},
+{6424,55,11656,6410,56,12112},
+{6224,56,12056,5892,56,12268},
+{5838,53,12934,6022,53,13196}
+
+}
+function DrawJumpSpot()
+	for _, wall in pairs(walls) do
+		local n = ((myHero.x-wall[1])^2+(myHero.z-wall[3])^2)
+		n = math.sqrt(math.round(n))
+		if(Menu.JumpSystem.AllSpotM) then
+				DrawCircleMinimap(wall[1], wall[2], wall[3], 100, 2, c_green)
+				DrawCircleMinimap(wall[4], wall[5], wall[6], 100, 2, c_green)
+		end
+		if(Menu.JumpSystem.AllSpot) then		
+				DrawCircle(wall[1], wall[2], wall[3], 100,  0x423f81)
+				DrawLine3D(wall[1],wall[2],wall[3],wall[4],wall[5],wall[6], 3, RGB(66,63,129))
+				DrawCircle(wall[4], wall[5], wall[6], 100,  0x423f81)
+		end
+		
+		if(Menu.JumpSystem.InRangeSpot and n < 1000 and Menu.JumpSystem.jumpK) then 
+				DrawCircle(wall[1], wall[2], wall[3], 100,  0x423f81)
+				DrawLine3D(wall[1],wall[2],wall[3],wall[4],wall[5],wall[6], 3, RGB(66,63,129))
+				DrawCircle(wall[4], wall[5], wall[6], 100,  0x423f81)
+		end
+	end
+end
+
+
+function Jump()
+	Jump_inrange = false
+	if Menu.JumpSystem.jumpK == true and Jump_inrange == false then
+		myHero:MoveTo(mousePos.x, mousePos.z)
+	end
+	for _, wall in pairs(walls) do
+		local n = ((mousePos.x-wall[1])^2+(mousePos.z-wall[3])^2)
+		n = math.sqrt(math.round(n))
+		if n <= 200 then
+			Jump_inrange = true
+			myHero:MoveTo(wall[1],wall[3])
+		else
+			Jump_inrange = false
+		end
+		if inRange(math.round(myHero.x), wall[1]) == true and inRange(math.round(myHero.z), wall[3]) == true then
+			if Humain then
+				CastSpell(_R)
+				CastSpell(_W,wall[1],wall[3])
+			else 
+				CastSpell(_W,wall[1],wall[3])
+			end
+		end
+	end
+	for _, wall in pairs(walls) do
+		local n = ((mousePos.x-wall[4])^2+(mousePos.z-wall[6])^2)
+		n = math.sqrt(math.round(n))
+		if n <= 200 then
+			Jump_inrange = true
+			myHero:MoveTo(wall[4],wall[6])
+		else
+			Jump_inrange = false
+		end
+		if inRange(math.round(myHero.x), wall[4]) == true and inRange(math.round(myHero.z), wall[6]) == true then
+			if Humain then
+				CastSpell(_R)
+				CastSpell(_W,wall[1],wall[3])
+			else 
+				CastSpell(_W,wall[1],wall[3])
+			end
+			
+		end
+	end
+end
+function inRange(cmp1, cmp2, range)
+	if not range then
+		range = 20
+	end
+	if cmp1 >= cmp2-range and cmp1 <= cmp2+range then
+		return true
+	else
+		return false
+	end
+end
 --------------------------------------------- VIP Function ------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
