@@ -35,7 +35,7 @@ local file = io.open(SCRIPT_PATH .."cc.txt", "w")
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
 
-local version = 0.04
+local version = 0.05
 local author = "Mr-Skizo"
 local SCRIPT_NAME = "SkizophrenicNidalee"
 local AUTOUPDATE = true
@@ -114,21 +114,41 @@ function OnDraw()
 	if(Menu.draws.DisRang == false) then
 		if(Humain) then
 			if(Menu.draws.DrawQ and (myHero:CanUseSpell(_Q) == READY)) then
-				DrawCircle(myHero.x, myHero.y, myHero.z, 1500, 0x111111)
+				if(Menu.draws.drawType == 2) then
+					DrawCircle(myHero.x, myHero.y, myHero.z, 1500, 0x111111)
+				else
+					DrawCircle3D(myHero.x, myHero.y, myHero.z, 1500, 2)
+				end	
 			end
 			if(Menu.draws.DrawW and (myHero:CanUseSpell(_W) == READY)) then
-				DrawCircle(myHero.x, myHero.y, myHero.z, 900, 0x111111)
+				if(Menu.draws.drawType == 2)then
+					DrawCircle(myHero.x, myHero.y, myHero.z, 900, 0x111111)
+				else
+					DrawCircle3D(myHero.x, myHero.y, myHero.z, 900, 2)
+				end	
 			end
 			if(Menu.draws.DrawE and (myHero:CanUseSpell(_E) == READY)) then
-				DrawCircle(myHero.x, myHero.y, myHero.z, 600, 0x111111)
+				if(Menu.draws.drawType == 2)then
+					DrawCircle(myHero.x, myHero.y, myHero.z, 600, 0x111111)
+				else
+					DrawCircle3D(myHero.x, myHero.y, myHero.z, 600, 2)
+				end	
 			end
 		end
 		if(Cougar) then
 			if(Menu.draws.DrawrWR and (myHero:CanUseSpell(_W) == READY)) then
-				DrawCircle(myHero.x, myHero.y, myHero.z, 375, 0x111111)
+				if(Menu.draws.drawType == 2)then
+					DrawCircle(myHero.x, myHero.y, myHero.z, 375, 0x111111)
+				else
+					DrawCircle3D(myHero.x, myHero.y, myHero.z, 375, 2)
+				end	
 			end
 			if(Menu.draws.DrawrER and (myHero:CanUseSpell(_E) == READY)) then
-				DrawCircle(myHero.x, myHero.y, myHero.z, 300, 0x111111)
+				if(Menu.draws.drawType == 2)then
+					DrawCircle(myHero.x, myHero.y, myHero.z, 300, 0x111111)
+				else
+					DrawCircle3D(myHero.x, myHero.y, myHero.z, 300, 2)
+				end	
 			end
 		end
 	end
@@ -329,7 +349,7 @@ function DrawMenu()
 		Menu.JumpSystem:addParam("AllSpot", "Draw all Spot in Mini", SCRIPT_PARAM_ONOFF, false)
 		Menu.JumpSystem:addParam("InRangeSpot", "Draw in range spot", SCRIPT_PARAM_ONOFF, false)
 		Menu.JumpSystem:addParam("jumpK", "Wall Jump", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("W"))
-		
+		Menu.JumpSystem:addParam('drawType', 'Draw Type', SCRIPT_PARAM_LIST, 2, {"Lag Free", "Normal"})
 	Menu:addSubMenu("Multiformtracker","Multiformtracker")
 		Menu.Multiformtracker:addParam("MultiformtrackerOn", "Use Multiformtracker", SCRIPT_PARAM_ONOFF, true)
 		Menu.Multiformtracker:addParam("MultiformtrackerScale", "Multiformtracker Scale", SCRIPT_PARAM_SLICE, 80, 0, 100)
@@ -355,6 +375,7 @@ function DrawMenu()
 	  Menu.draws:addParam("blank", "	Cougar Form", SCRIPT_PARAM_INFO, " ")
 	  Menu.draws:addParam("DrawrWR", "Draw Cougar W Rang", SCRIPT_PARAM_ONOFF, true)
 	  Menu.draws:addParam("DrawrER", "Draw Cougar E Rang", SCRIPT_PARAM_ONOFF, true)
+	  Menu.draws:addParam('drawType', 'Draw Type', SCRIPT_PARAM_LIST, 2, {"Lag Free", "Normal"})
 	Menu:addSubMenu("Mana Manager", "Mana")
 		Menu.Mana:addParam("", "<------Harass------>", SCRIPT_PARAM_INFO, "")
 		Menu.Mana:addParam("HarassQ", "Mana to use Q", SCRIPT_PARAM_SLICE, 50, 0, 100, 0)
@@ -952,25 +973,40 @@ walls = {{8384,51,2906,8320,52,3276},
 
 }
 function DrawJumpSpot()
-	for _, wall in pairs(walls) do
-		local n = ((myHero.x-wall[1])^2+(myHero.z-wall[3])^2)
-		n = math.sqrt(math.round(n))
-		if(Menu.JumpSystem.AllSpotM) then
-				DrawCircleMinimap(wall[1], wall[2], wall[3], 100, 2, c_green)
-				DrawCircleMinimap(wall[4], wall[5], wall[6], 100, 2, c_green)
+	
+		for _, wall in pairs(walls) do
+			local n = ((myHero.x-wall[1])^2+(myHero.z-wall[3])^2)
+			n = math.sqrt(math.round(n))
+			if(Menu.JumpSystem.AllSpotM) then
+					DrawCircleMinimap(wall[1], wall[2], wall[3], 100, 2, c_green)
+					DrawCircleMinimap(wall[4], wall[5], wall[6], 100, 2, c_green)
+			end
+			if(Menu.JumpSystem.AllSpot) then	
+				if(Menu.JumpSystem.drawType == 2) then
+					DrawCircle(wall[1], wall[2], wall[3], 100,  0x423f81)
+					DrawLine3D(wall[1],wall[2],wall[3],wall[4],wall[5],wall[6], 3, RGB(66,63,129))
+					DrawCircle(wall[4], wall[5], wall[6], 100,  0x423f81)
+				else
+					DrawCircle3D(wall[1], wall[2], wall[3], 100, 2)
+					DrawLine3D(wall[1],wall[2],wall[3],wall[4],wall[5],wall[6], 3)
+					DrawCircle3D(wall[4], wall[5], wall[6], 100, 2)
+				end
+			end
+			
+			if(Menu.JumpSystem.InRangeSpot and n < 1000 and Menu.JumpSystem.jumpK) then 
+				if(Menu.JumpSystem.drawType == 2) then	
+					DrawCircle(wall[1], wall[2], wall[3], 100,  0x423f81)
+					DrawLine3D(wall[1],wall[2],wall[3],wall[4],wall[5],wall[6], 3, RGB(66,63,129))
+					DrawCircle(wall[4], wall[5], wall[6], 100,  0x423f81)
+				else
+					DrawCircle3D(wall[1], wall[2], wall[3], 100, 2)
+					DrawLine3D(wall[1],wall[2],wall[3],wall[4],wall[5],wall[6], 3)
+					DrawCircle3D(wall[4], wall[5], wall[6], 100, 2)
+				end
+			end
 		end
-		if(Menu.JumpSystem.AllSpot) then		
-				DrawCircle(wall[1], wall[2], wall[3], 100,  0x423f81)
-				DrawLine3D(wall[1],wall[2],wall[3],wall[4],wall[5],wall[6], 3, RGB(66,63,129))
-				DrawCircle(wall[4], wall[5], wall[6], 100,  0x423f81)
-		end
-		
-		if(Menu.JumpSystem.InRangeSpot and n < 1000 and Menu.JumpSystem.jumpK) then 
-				DrawCircle(wall[1], wall[2], wall[3], 100,  0x423f81)
-				DrawLine3D(wall[1],wall[2],wall[3],wall[4],wall[5],wall[6], 3, RGB(66,63,129))
-				DrawCircle(wall[4], wall[5], wall[6], 100,  0x423f81)
-		end
-	end
+	
+	
 end
 
 
