@@ -907,8 +907,8 @@ return (s >= 0 and s <= 1 and t >= 0 and t <= 1) and (Vector(v1Start.x + (t * s1
 end
 
 function DrawJumpSpot()
-	 DrawLine3D(4768.71,93.89,2571.65,4799.94,94.56,2005.05, 3, RGB(66,63,129))
-	 DrawLine3D(myHero.x,myHero.y,myHero.z,myHero.endPath.x ,myHero.endPath.y,myHero.endPath.z, 3)
+	-- DrawLine3D(4768.71,93.89,2571.65,4799.94,94.56,2005.05, 3, RGB(66,63,129))
+	-- DrawLine3D(myHero.x,myHero.y,myHero.z,myHero.endPath.x ,myHero.endPath.y,myHero.endPath.z, 3)
 		for _, wall in pairs(walls) do
 			local n = ((myHero.x-wall[1])^2+(myHero.z-wall[3])^2)
 			n = math.sqrt(math.round(n))
@@ -1030,10 +1030,10 @@ function OnNewPath(unit, startPos, endPos, isDash, dashSpeed ,dashGravity, dashD
 			--myHero:MoveTo(f.x,f.z)
 		-- end
 	--end
-	 if(unit.isMe) then
-		 OriginalAndPos[firstone] = myHero.endPath
-		 firstone = firstone+ 1
-	 end
+	-- if(unit.isMe) then
+		-- OriginalAndPos[firstone] = myHero.endPath
+		-- firstone = firstone+ 1
+	-- end
 end
 
 --------------------------------------------- VIP Function ------------------------------------------
@@ -1083,6 +1083,7 @@ function AutoLvlUp()
 	end
 end
 end
+
 --------------------------------------------- Basic Function ----------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
