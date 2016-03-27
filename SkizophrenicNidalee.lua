@@ -1,5 +1,5 @@
 --[[
-version = 0.6
+version = 0.7
 author = "Mr-Skizo"
 SCRIPT_NAME = "SkizophrenicNidalee"
 ]]
@@ -9,9 +9,9 @@ if myHero.charName ~= "Nidalee" then return end
 --------------------------------------------- Auto Update -------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
-local version = 0.06
+local version = 0.07
 local author = "Mr-Skizo"
-local last_update = "24/03/206"
+local last_update = "27/03/206"
 
 function AutoUpdater()
 	
@@ -302,12 +302,6 @@ function DrawMenu()
 		Menu.farm.Lfarm:addParam("REinLane","Use Cougar E", SCRIPT_PARAM_ONOFF,true)
 		Menu.farm.Lfarm:addParam("blank", "<------------------>", SCRIPT_PARAM_INFO, " ")
 		Menu.farm.Lfarm:addParam("RinLane","Use R", SCRIPT_PARAM_ONOFF,true)
-   Menu:addSubMenu("> Jump System Beta","JumpSystem")
-		Menu.JumpSystem:addParam("AllSpotM", "Draw all spot in Mini Map", SCRIPT_PARAM_ONOFF, false)
-		Menu.JumpSystem:addParam("AllSpot", "Draw all Spot in Mini", SCRIPT_PARAM_ONOFF, false)
-		Menu.JumpSystem:addParam("InRangeSpot", "Draw in range spot", SCRIPT_PARAM_ONOFF, false)
-		Menu.JumpSystem:addParam("jumpK", "Wall Jump", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("W"))
-		Menu.JumpSystem:addParam('drawType', 'Draw Type', SCRIPT_PARAM_LIST, 2, {"Lag Free", "Normal"})
 	Menu:addSubMenu("> Multiformtracker","Multiformtracker")
 		Menu.Multiformtracker:addParam("MultiformtrackerOn", "Use Multiformtracker", SCRIPT_PARAM_ONOFF, true)
 		Menu.Multiformtracker:addParam("MultiformtrackerScale", "Multiformtracker Scale", SCRIPT_PARAM_SLICE, 80, 0, 100)
@@ -342,7 +336,17 @@ function DrawMenu()
 		Menu.Mana:addParam("AllyHeal", "Mana to ally auto heal", SCRIPT_PARAM_SLICE, 20, 0, 100, 0)
 		Menu.Mana:addParam("", "<------Jungle Clear------>", SCRIPT_PARAM_INFO, "")
 		Menu.Mana:addParam("JungleClear", "Mana to jungle with humain form", SCRIPT_PARAM_SLICE, 20, 0, 100, 0)
-	
+	Menu:addSubMenu("> Damage Draw","dmgdraw")
+		Menu.dmgdraw:addParam("drawit", "Draw dmg in hp bar", SCRIPT_PARAM_ONOFF, true)
+	Menu:addSubMenu("> Steal","Steal")
+		Menu.Steal:addParam("KillSteal", "KS with haumain Q", SCRIPT_PARAM_ONOFF, false)
+		Menu.Steal:addParam("JungleSteal", "Jungle Steal", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("T"))
+	Menu:addSubMenu("> Jump System Beta","JumpSystem")
+		Menu.JumpSystem:addParam("AllSpotM", "Draw all spot in Mini Map", SCRIPT_PARAM_ONOFF, false)
+		Menu.JumpSystem:addParam("AllSpot", "Draw all Spot in Mini", SCRIPT_PARAM_ONOFF, false)
+		Menu.JumpSystem:addParam("InRangeSpot", "Draw in range spot", SCRIPT_PARAM_ONOFF, false)
+		Menu.JumpSystem:addParam("jumpK", "Wall Jump", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("W"))
+		Menu.JumpSystem:addParam('drawType', 'Draw Type', SCRIPT_PARAM_LIST, 2, {"Lag Free", "Normal"})
     if VIP_USER then
     Menu:addSubMenu("> Skin Changer", "skin")
 	Menu:addSubMenu("> Auto Leveler", "AutoLvL")
@@ -408,7 +412,7 @@ function TargetHunted(unit)
         end
 		for _,v in pairs(jungleMinions.objects)do
 			if v.charName == unit.charName then
-				return TargetHaveBuff('nidaleepassivehunted', unit)
+				return TargetHaveBuff('NidaleePassiveHunted', unit)
 			end
 		end
 end
@@ -506,6 +510,75 @@ function CDCheck()
 		end
 	end
 	CDTracker.R = myHero:GetSpellData(_R).currentCd
+end
+
+function GetHPBarPos(enemy)
+    enemy.barData = {PercentageOffset = {x = -0.05, y = 0}}
+    local barPos = GetUnitHPBarPos(enemy)
+    local barPosOffset = GetUnitHPBarOffset(enemy)
+    local barOffset = { x = enemy.barData.PercentageOffset.x, y = enemy.barData.PercentageOffset.y }
+    local barPosPercentageOffset = { x = enemy.barData.PercentageOffset.x, y = enemy.barData.PercentageOffset.y }
+    local BarPosOffsetX = -50
+    local BarPosOffsetY = 46
+    local CorrectionY = 39
+    local StartHpPos = 31
+    barPos.x = math.floor(barPos.x + (barPosOffset.x - 0.5 + barPosPercentageOffset.x) * BarPosOffsetX + StartHpPos)
+    barPos.y = math.floor(barPos.y + (barPosOffset.y - 0.5 + barPosPercentageOffset.y) * BarPosOffsetY + CorrectionY)
+    local StartPos = Vector(barPos.x , barPos.y, 0)
+    local EndPos = Vector(barPos.x + 108 , barPos.y , 0)    
+    return Vector(StartPos.x, StartPos.y, 0), Vector(EndPos.x, EndPos.y, 0)
+end
+
+function DrawLineHPBar(damage, text, unit, enemyteam)
+    if unit.dead or not unit.visible then return end
+    local p = WorldToScreen(D3DXVECTOR3(unit.x, unit.y, unit.z))
+    if not OnScreen(p.x, p.y) then return end
+    local thedmg = 0
+    local line = 2
+    local linePosA  = {x = 0, y = 0 }
+    local linePosB  = {x = 0, y = 0 }
+    local TextPos   = {x = 0, y = 0 }
+   
+   
+    if damage >= unit.maxHealth then
+        thedmg = unit.maxHealth - 1
+    else
+        thedmg = damage
+    end
+   
+    thedmg = math.round(thedmg)
+   
+    local StartPos, EndPos = GetHPBarPos(unit)
+    local Real_X = StartPos.x + 24
+    local Offs_X = (Real_X + ((unit.health - thedmg) / unit.maxHealth) * (EndPos.x - StartPos.x - 2))
+    if Offs_X < Real_X then Offs_X = Real_X end
+    local mytrans = 350 - math.round(255*((unit.health-thedmg)/unit.maxHealth))
+    if mytrans >= 255 then mytrans=254 end
+    local my_bluepart = math.round(400*((unit.health-thedmg)/unit.maxHealth))
+    if my_bluepart >= 255 then my_bluepart=254 end
+ 
+   
+    if enemyteam then
+        linePosA.x = Offs_X-150
+        linePosA.y = (StartPos.y-(30+(line*15)))    
+        linePosB.x = Offs_X-150
+        linePosB.y = (StartPos.y-10)
+        TextPos.x = Offs_X-148
+        TextPos.y = (StartPos.y-(30+(line*15)))
+    else
+        linePosA.x = Offs_X-125
+        linePosA.y = (StartPos.y-(30+(line*15)))    
+        linePosB.x = Offs_X-125
+        linePosB.y = (StartPos.y-15)
+   
+        TextPos.x = Offs_X-122
+        TextPos.y = (StartPos.y-(30+(line*15)))
+    end
+       
+        local dmgDraw = unit.health - thedmg
+        if dmgDraw < 0 then dmgDraw = 0 end
+    DrawLine(linePosA.x, linePosA.y, linePosB.x, linePosB.y , 2, ARGB(mytrans, 255, my_bluepart, 0))
+    DrawText("HP: "..tostring(math.ceil(dmgDraw)).." | "..tostring(text), 15, TextPos.x, TextPos.y , ARGB(mytrans, 255, my_bluepart, 0))
 end
 
 --------------------------------------------- Feature Function --------------------------------------
@@ -756,6 +829,78 @@ function MultiformtrackerDraw()
 	end
 end
 
+function DrawLifeBar()
+	if Menu.dmgdraw.drawit then
+        for i, unit in pairs(myEnemyTable) do
+            if ValidTarget(unit) and GetDistance(unit) <= 2500 then
+                if(CDTracker.Q == 0) then
+					QTdmg = getDmg("Q", unit, myHero)
+					if(GetDistance(unit) > 525) then
+						disDmg = (GetDistance(unit)/100) / 3.87
+						if(disDmg > 2) then disDmg = 2 end
+						QTdmg = QTdmg + (QTdmg *disDmg)
+					end
+				end
+				if(CDTracker.W == 0) then
+					WTdmg = getDmg("W", unit, myHero)
+				end
+				if(CDTracker.RQ == 0) then
+					RQTdmg = getDmg("QM", unit, myHero)
+					if TargetHunted(unit) then
+						RQTdmg = RQTdmg + (RQTdmg * 33)/100
+					end
+				end
+				if(CDTracker.RW == 0) then
+					RWTdmg = getDmg("WM", unit, myHero)
+				end
+				if(CDTracker.RE == 0) then
+					RETdmg = getDmg("EM", unit, myHero)
+				end
+			DrawLineHPBar(QTdmg+WTdmg+RQTdmg+RWTdmg+RETdmg,"", unit, true)	
+            end
+		
+        end
+    end
+end
+
+function KillSteal()
+        if Humain and Menu.Steal.KillSteal then
+                for i, unit in pairs(myEnemyTable) do
+                        if(CDTracker.Q == 0 and GetDistance(unit) <1500) then
+							QTdmg = getDmg("Q", unit, myHero)
+							if(GetDistance(unit) > 525) then
+								disDmg = (GetDistance(unit)/100) / 3.87
+								if(disDmg > 2) then disDmg = 2 end
+								QTdmg = QTdmg + (QTdmg *disDmg)
+							end
+						end
+                        if ValidTarget(unit) and unit.health <= QTdmg then
+                                CastQ(unit)
+						end
+                        
+                end
+        end
+end
+
+function JungleSteal()
+        if Humain and Menu.Steal.JungleSteal then
+				myHero:MoveTo(mousePos.x, mousePos.z)
+                for i, unit in pairs(jungleMinions.objects) do
+                        if(CDTracker.Q == 0 and GetDistance(unit) <1500) then
+							QTdmg = getDmg("Q", unit, myHero)
+							if(GetDistance(unit) > 525) then
+								disDmg = (GetDistance(unit)/100) / 3.87
+								if(disDmg > 2) then disDmg = 2 end
+								QTdmg = QTdmg + (QTdmg *disDmg)
+							end
+						end
+                        if ValidTarget(unit) and unit.health <= QTdmg then
+                                CastQ(unit)
+						end
+                        
+                end
+        end
+end
 --------------------------------------------- Wall Jump ---------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
@@ -851,64 +996,64 @@ walls = {{8384,51,2906,8320,52,3276},
 }
 
 
-local drawThis = {time = 0}
+--local drawThis = {time = 0}
 
-function NearestNonWall(_x, _y, _z, _radius, accuracy) --Credits to gReY
-	local vec = D3DXVECTOR3(_x, _y, _z)
+-- function NearestNonWall(_x, _y, _z, _radius, accuracy) --Credits to gReY
+	-- local vec = D3DXVECTOR3(_x, _y, _z)
 	
-	accuracy = accuracy or 50
-	_radius = _radius and math.floor(_radius / accuracy) or math.huge
+	-- accuracy = accuracy or 50
+	-- _radius = _radius and math.floor(_radius / accuracy) or math.huge
 	
-	_x, _z = math.round(_x / accuracy) * accuracy, math.round(_z / accuracy) * accuracy
+	-- _x, _z = math.round(_x / accuracy) * accuracy, math.round(_z / accuracy) * accuracy
 
-	local radius = 2
+	-- local radius = 2
 	
-	local function checkP(x, y) 
-		vec.x, vec.z = _x + x * accuracy, _z + y * accuracy 
+	-- local function checkP(x, y) 
+		-- vec.x, vec.z = _x + x * accuracy, _z + y * accuracy 
 
-		return IsWall(vec) 
-	end
+		-- return IsWall(vec) 
+	-- end
 	
-	while radius <= _radius do
-		if not checkP(0, radius) or not checkP(radius, 0) or not checkP(0, -radius) or not checkP(-radius, 0) then
-			return vec
-		end
+	-- while radius <= _radius do
+		-- if not checkP(0, radius) or not checkP(radius, 0) or not checkP(0, -radius) or not checkP(-radius, 0) then
+			-- return vec
+		-- end
 
-		local f, x, y = 1 - radius, 0, radius
-		while x < y - 1 do
-			x = x + 1
+		-- local f, x, y = 1 - radius, 0, radius
+		-- while x < y - 1 do
+			-- x = x + 1
 
-			if f < 0 then 
-				f = f + 1 + 2 * x
-			else 
-				y, f = y - 1, f + 1 + 2 * (x - y)
-			end
+			-- if f < 0 then 
+				-- f = f + 1 + 2 * x
+			-- else 
+				-- y, f = y - 1, f + 1 + 2 * (x - y)
+			-- end
 
-			if not checkP(x, y) or not checkP(-x, y) or not checkP(x, -y) or not checkP(-x, -y) or not checkP(y, x) or not checkP(-y, x) or not checkP(y, -x) or not checkP(-y, -x) then 
-				return vec 
-			end
-		end
+			-- if not checkP(x, y) or not checkP(-x, y) or not checkP(x, -y) or not checkP(-x, -y) or not checkP(y, x) or not checkP(-y, x) or not checkP(y, -x) or not checkP(-y, -x) then 
+				-- return vec 
+			-- end
+		-- end
 
-		radius = radius + 1
-	end
-end
-function checkWall(pos)
-	local vec = D3DXVECTOR3(pos.x,pos.y,pos.z)
-	return IsWall(vec)
-end
+		-- radius = radius + 1
+	-- end
+-- end
+-- function checkWall(pos)
+	-- local vec = D3DXVECTOR3(pos.x,pos.y,pos.z)
+	-- return IsWall(vec)
+-- end
 
-function GetIntersection( v1Start,  v1End, v2Start,  v2End)
-    local s1_x, s1_y, s2_x, s2_y =  v1End.x - v1Start.x,v1End.z - v1Start.z,v2End.x - v2Start.x,v2End.z - v2Start.z
-    local div = (-s2_x * s1_y + s1_x * s2_y)
-	if div == 0 then return nil end
-    local s = (-s1_y * (v1Start.x - v2Start.x) + s1_x * (v1Start.z - v2Start.z)) /div;
-    local t = ( s2_x * (v1Start.z - v2Start.z) - s2_y * (v1Start.x - v2Start.x)) / div;
-return (s >= 0 and s <= 1 and t >= 0 and t <= 1) and (Vector(v1Start.x + (t * s1_x),0,v1Start.z + (t * s1_y)) or nil)
-end
+-- function GetIntersection( v1Start,  v1End, v2Start,  v2End)
+    -- local s1_x, s1_y, s2_x, s2_y =  v1End.x - v1Start.x,v1End.z - v1Start.z,v2End.x - v2Start.x,v2End.z - v2Start.z
+    -- local div = (-s2_x * s1_y + s1_x * s2_y)
+	-- if div == 0 then return nil end
+    -- local s = (-s1_y * (v1Start.x - v2Start.x) + s1_x * (v1Start.z - v2Start.z)) /div;
+    -- local t = ( s2_x * (v1Start.z - v2Start.z) - s2_y * (v1Start.x - v2Start.x)) / div;
+-- return (s >= 0 and s <= 1 and t >= 0 and t <= 1) and (Vector(v1Start.x + (t * s1_x),0,v1Start.z + (t * s1_y)) or nil)
+-- end
 
 function DrawJumpSpot()
 	-- DrawLine3D(4768.71,93.89,2571.65,4799.94,94.56,2005.05, 3, RGB(66,63,129))
-	-- DrawLine3D(myHero.x,myHero.y,myHero.z,myHero.endPath.x ,myHero.endPath.y,myHero.endPath.z, 3)
+	 --DrawLine3D(myHero.x,myHero.y,myHero.z,myHero.endPath.x ,myHero.endPath.y,myHero.endPath.z, 3)
 		for _, wall in pairs(walls) do
 			local n = ((myHero.x-wall[1])^2+(myHero.z-wall[3])^2)
 			n = math.sqrt(math.round(n))
@@ -943,19 +1088,6 @@ function DrawJumpSpot()
 	
 	
 end
-
--- function G_DrawCircle(x, y, z, radius, color)
- 
-  -- local v1 = Vector(cameraPos.x, cameraPos.y, cameraPos.z)
-  -- local v2 = Vector(x, y, z)
-  -- local ClosestPos = v2+(v1-v2):normalized()*radius
-  -- local ScreenPos = WorldToScreen(D3DXVECTOR3(ClosestPos.x, ClosestPos.y, ClosestPos.z))
-  
-  -- if OnScreen({x = ScreenPos.x, y = ScreenPos.y}, {x = ScreenPos.x, y = ScreenPos.y}) then
-      -- DrawCircle3D(x, y, z, radius*.96, Menu.Thick, color or 4294967295, Menu.Quality)
-    -- end
--- end
-
 
 function Jump()
 	Jump_inrange = false
@@ -1011,9 +1143,7 @@ function inRange(cmp1, cmp2, range)
 		return false
 	end
 end
-local firstone = 1
-local posA = nil
-local OriginalAndPos = {}
+
 function OnNewPath(unit, startPos, endPos, isDash, dashSpeed ,dashGravity, dashDistance)
 	--if(myHero.hasMovePath) then
 		-- if unit.isMe then
@@ -1030,60 +1160,79 @@ function OnNewPath(unit, startPos, endPos, isDash, dashSpeed ,dashGravity, dashD
 			--myHero:MoveTo(f.x,f.z)
 		-- end
 	--end
-	-- if(unit.isMe) then
-		-- OriginalAndPos[firstone] = myHero.endPath
-		-- firstone = firstone+ 1
-	-- end
 end
 
 --------------------------------------------- VIP Function ------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
 if VIP_USER then
-function SkinLoad()
-    Menu.skin:addParam('changeSkin', 'Change Skin', SCRIPT_PARAM_ONOFF, false);
-    Menu.skin:setCallback('changeSkin', function(nV)
-        if (nV) then
-            SetSkin(myHero, Menu.skin.skinID)
-        else
-            SetSkin(myHero, -1)
-        end
-    end)
-    Menu.skin:addParam('skinID', 'Skin', SCRIPT_PARAM_LIST, 1, {"Snow Bunny", "Leopard", "French Maid", "Pharaoh", "Bewitching", "Headhunter", "Warring Kingdoms", "ChallengerNidalee", "Original"})
-    Menu.skin:setCallback('skinID', function(nV)
-        if (Menu.skin.changeSkin) then
-            SetSkin(myHero, nV)
-        end
-    end)
-    
-    if (Menu.skin.changeSkin) then
-        SetSkin(myHero, Menu.skin.skinID)
-    end
-end
-function AutoLvlUp()
-	if Menu.AutoLvL.lvlOn then
-		
- 		SequenceLevel = {
- 		[1] = {1,2,3,1,1,4,2,1,2,3,4,1,2,3,2,4,3,3},
- 		[2] = {1,3,2,1,1,4,3,1,3,2,4,1,3,2,3,4,2,2},
- 		[3] = {3,1,2,3,3,4,1,3,1,2,4,3,1,2,1,4,2,2},
- 		[4] = {3,2,1,3,3,4,2,3,2,1,4,3,2,1,2,4,1,1},
- 		}
- 		AddTickCallback(function()
-			
- 			if Menu.AutoLvL.lvlOn and os.clock() - Last_LevelSpell > 0.5 then
-			  autoLevelSetSequence(SequenceLevel[Menu.AutoLvL.lvlMode])
-			  Last_LevelSpell = os.clock()  
-			elseif not Menu.AutoLvL.lvlOn then
-				autoLevelSetSequence(nil)
+	function SkinLoad()
+		Menu.skin:addParam('changeSkin', 'Change Skin', SCRIPT_PARAM_ONOFF, false);
+		Menu.skin:setCallback('changeSkin', function(nV)
+			if (nV) then
+				SetSkin(myHero, Menu.skin.skinID)
+			else
+				SetSkin(myHero, -1)
 			end
-			
- 		end)
-
+		end)
+		Menu.skin:addParam('skinID', 'Skin', SCRIPT_PARAM_LIST, 1, {"Snow Bunny", "Leopard", "French Maid", "Pharaoh", "Bewitching", "Headhunter", "Warring Kingdoms", "ChallengerNidalee", "Original"})
+		Menu.skin:setCallback('skinID', function(nV)
+			if (Menu.skin.changeSkin) then
+				SetSkin(myHero, nV)
+			end
+		end)
+		
+		if (Menu.skin.changeSkin) then
+			SetSkin(myHero, Menu.skin.skinID)
+		end
 	end
-end
-end
+	function AutoLvlUp()
+		if Menu.AutoLvL.lvlOn then
+			
+			SequenceLevel = {
+			[1] = {1,2,3,1,1,4,2,1,2,3,4,1,2,3,2,4,3,3},
+			[2] = {1,3,2,1,1,4,3,1,3,2,4,1,3,2,3,4,2,2},
+			[3] = {3,1,2,3,3,4,1,3,1,2,4,3,1,2,1,4,2,2},
+			[4] = {3,2,1,3,3,4,2,3,2,1,4,3,2,1,2,4,1,1},
+			}
+			AddTickCallback(function()
+				
+				if Menu.AutoLvL.lvlOn and os.clock() - Last_LevelSpell > 0.5 then
+				  autoLevelSetSequence(SequenceLevel[Menu.AutoLvL.lvlMode])
+				  Last_LevelSpell = os.clock()  
+				elseif not Menu.AutoLvL.lvlOn then
+					autoLevelSetSequence(nil)
+				end
+				
+			end)
 
+		end
+	end
+	function CheckAutoLvl()
+	_G.GetHeroLeveled = function()
+		return player:GetSpellData(SPELL_1).level + player:GetSpellData(SPELL_2).level + player:GetSpellData(SPELL_3).level + player:GetSpellData(SPELL_4).level-1
+	end
+	_G.LevelSpell = function(id)
+	if (string.find(GetGameVersion(), 'Releases/6.6') ~= nil) and Menu.AutoLvL.lvlOn then
+		local offsets = { 
+			[_Q] = 0xF8,
+			[_W] = 0x4F,
+			[_E] = 0x14,
+			[_R] = 0x9E,
+		  }
+		  local p = CLoLPacket(0xA9)
+		  p.vTable = 0xF3981C
+		  p:EncodeF(myHero.networkID)
+		  p:Encode4(0x19)
+		  p:Encode4(0x44)
+		  p:Encode1(0xEC)
+		  p:Encode1(offsets[id])
+		  p:Encode4(0xF7)
+		  SendPacket(p)
+	end
+  end
+end
+end
 --------------------------------------------- Basic Function ----------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
@@ -1105,7 +1254,7 @@ function OnAnimation(unit, animation)
 end
 
 function OnUpdateBuff(unit, buff)
-        if buff.name == "nidaleepassivehunted" and unit and not unit.isMe then
+        if buff.name == "NidaleePassiveHunted" and unit and not unit.isMe then
                 for i, Champ in pairs(Champ) do
                         if Champ == unit.charName then
                                 Passive[i] = true
@@ -1168,13 +1317,13 @@ function OnDraw()
 	end
 	MultiformtrackerDraw()	
 	DrawJumpSpot()
-	
+	DrawLifeBar()
 end
 
-	-- local p4 = Vector(4768.71,93.89,2571.65)
-	-- local p5 = Vector(4799.94,94.56,2005.05)
+	 --local p4 = Vector(4768.71,93.89,2571.65)
+	 --local p5 = Vector(4799.94,94.56,2005.05)
 
-
+--local firstone = 0
 function OnTick()
 	ts:update()
 	Checks()
@@ -1186,25 +1335,31 @@ function OnTick()
 	jungleClear()
 	target = ts.target
 	MultiformtrackerDraw()
+	KillSteal()
+	JungleSteal()
    if Menu.JumpSystem.jumpK == true then
 		Jump()
 		DrawJumpSpot()
+	
 	end
 	
 	-- DelayAction(function()
-		-- posA = GetIntersection(p4,p5,myHero.pos,myHero.endPath)
-		
-		-- if posA~= false and posA~=nil then
-			-- myHero:MoveTo(posA.x,posA.z)
-		-- end
-	-- end,2)
-	-- if(not myHero.hasMovePath and posA~= false and posA~=nil and firstone > 1) then
-		-- SendMsg(firstone)
-		-- CastSpell(_W,OriginalAndPos[1].x,OriginalAndPos[1].z)
-		-- myHero:MoveTo(OriginalAndPos[1].x,OriginalAndPos[1].z)
-		-- firstone = 0
-		-- OriginalAndPos = {}
-	-- end 
+		 -- posA = GetIntersection(p4,p5,myHero.pos,myHero.endPath)
+	
+		 -- if posA~= false and posA~=nil and firstone == 0 and Wready and not Humain then
+			 -- myHero:MoveTo(posA.x,posA.z)
+			 -- posA = nil
+			 -- firstone = 2
+		 -- end
+	-- end,10)	
+	-- if(not myHero.hasMovePath and firstone == 2) then
+		 -- CastSpell(_W, mousePos.x , mousePos.z)
+		 -- myHero:MoveTo(mousePos.x , mousePos.z)
+		 
+		 -- posA = nil
+		 -- firstone = 0
+		-- end  
+	
 end 
 
 
@@ -1231,6 +1386,7 @@ function OnLoad()
 	LoadOrb()
 	if VIP_USER then 
 		SkinLoad() 
+		CheckAutoLvl()
 		AutoLvlUp()
 	end
 end
@@ -1240,3 +1396,5 @@ function OnUnload()
 		CastSpell(_R)
 	end
 end
+
+
