@@ -11,7 +11,7 @@ if myHero.charName ~= "Nidalee" then return end
 -----------------------------------------------------------------------------------------------------
 local version = 0.07
 local author = "Mr-Skizo"
-local last_update = "27/03/206"
+local last_update = "27/03/2016"
 
 function AutoUpdater()
 	
