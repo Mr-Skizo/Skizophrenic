@@ -1,5 +1,5 @@
 --[[
-version = 0.01
+version = 0.02
 author = "Mr-Skizo"
 SCRIPT_NAME = "SkizophrenicLeBlanc"
 ]]
@@ -9,7 +9,7 @@ if myHero.charName ~= "Leblanc" then return end
 --------------------------------------------- Auto Update -------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
-local version = 0.01
+local version = 0.02
 local author = "Mr-Skizo"
 local last_update = "04/04/2016"
 
@@ -164,6 +164,7 @@ end
 -----------------------------------------------------------------------------------------------------
 local Rspell = 'Q'
 local CanIBack = false
+local CanIBackM = false
 function Variables()
 	lastAttack = 0
 	lastAttackCD = 0
@@ -183,7 +184,7 @@ function Variables()
    	
 	myEnemyTable = GetEnemyHeroes()
 	enemyMinions = minionManager(MINION_ENEMY, 1000, myHero, MINION_SORT_MAXHEALTH_ASC)
-   	jungleMinions = minionManager(MINION_JUNGLE, 1400, myHero, MINION_SORT_MAXHEALTH_DEC)
+   	jungleMinions = minionManager(MINION_JUNGLE, 1000, myHero, MINION_SORT_MAXHEALTH_DEC)
 	
 	UPL:AddSpell(_E, {speed = VARS.E.speed, delay = VARS.E.delay, range = VARS.E.range, width = VARS.E.width, collision = true, aoe = false, type = "linear"})
     UPL:AddSpell(_W, {speed = VARS.W.speed, delay = VARS.W.delay, range = VARS.W.range, width = VARS.W.width, collision = false, aoe = false, type = "circular"})
@@ -318,7 +319,7 @@ end
 function CastR(unit)
 	if(Rspell == 'Q') then
 		CastSpell(_R, unit)
-	elseif(Rspell == 'W') then
+	elseif(Rspell == 'W' and not CanIBackM) then
 		local Pos, HitChance, HeroPosition = UPL:Predict(_W, myHero, unit)
 		if HitChance > 0 then
 			CastSpell(_R, Pos.x, Pos.z)
@@ -336,7 +337,7 @@ function CastSpel(unit,Spell)
 	if(Spell == 'Q') then
 		CastQ(unit)
 	end
-	if(Spell == 'W') then
+	if(Spell == 'W' and not CanIBack) then
 		CastW(unit)
 	end
 	if(Spell == 'E') then
@@ -413,7 +414,7 @@ function GetComboDmg(unit)
 	return TTdmg
 end
 function IsKillable(unit)
-	if(unit.health <= GetComboDmg(unit)) then
+	if unit.health <= (GetComboDmg(unit)  + 100) then
 		return true
 	end
 	return false
@@ -577,7 +578,7 @@ function combo()
 					end
 					CastE(target)
 				end
-				if(CountAllyHeroInRange(1600,target) >= 1 ) then 
+				if(CountAllyHeroInRange(1600) >= 1 ) then 
 					if(not IsKillable(target)) then
 						if GetDistance(target) < VARS.W.range + VARS.E.range and not CanIBack and Wready and Eready then
 							CastSpell(_W, target)
@@ -612,7 +613,6 @@ function combo()
 				sequence = BestCombo(target)
 				if(sequence) then
 					for i, spell in pairs(sequence) do
-						SendMsg(spell)
 						CastSpel(target,spell)
 					end
 				elseif CountAllyHeroInRange(1600,target) >= 1 and GetDistance(target) <= VARS.W.range + VARS.E.range and GetDistance(target) > VARS.W.range then
@@ -842,6 +842,9 @@ function OnUpdateBuff(unit, buff)
 		if buff.name=="LeblancSlide" and unit and unit.isMe then
 			CanIBack = true
 		end
+		if buff.name=="LeblancSlideM" and unit and unit.isMe then
+			CanIBackM = true
+		end
 end
  
 function OnRemoveBuff(unit,buff)
@@ -854,6 +857,9 @@ function OnRemoveBuff(unit,buff)
         end
 		if buff.name=="LeblancSlide" and unit and unit.isMe then
 			CanIBack = false
+		end
+		if buff.name=="LeblancSlideM" and unit and unit.isMe then
+			CanIBackM = false
 		end
 end
 
@@ -912,7 +918,7 @@ function OnLoad()
 	  end
 	end
 --UPL FIN
---AutoUpdater()
+	AutoUpdater()
 	Variables()
 	DrawMenu()
 	Menu.TargetSelector:addTS(ts)
