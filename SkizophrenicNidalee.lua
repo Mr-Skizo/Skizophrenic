@@ -1,5 +1,5 @@
 --[[
-version = 0.7
+version = 0.08
 author = "Mr-Skizo"
 SCRIPT_NAME = "SkizophrenicNidalee"
 ]]
@@ -9,9 +9,9 @@ if myHero.charName ~= "Nidalee" then return end
 --------------------------------------------- Auto Update -------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
-local version = 0.07
+local version = 0.08
 local author = "Mr-Skizo"
-local last_update = "27/03/2016"
+local last_update = "04/04/2016"
 
 function AutoUpdater()
 	
@@ -349,10 +349,10 @@ function DrawMenu()
 		Menu.JumpSystem:addParam('drawType', 'Draw Type', SCRIPT_PARAM_LIST, 2, {"Lag Free", "Normal"})
     if VIP_USER then
     Menu:addSubMenu("> Skin Changer", "skin")
-	Menu:addSubMenu("> Auto Leveler", "AutoLvL")
-    Menu.AutoLvL:addParam("lvlOn", "Use Auto Leveler", SCRIPT_PARAM_ONOFF, false)
- 	Menu.AutoLvL:addParam("lvlMode", "Mode", SCRIPT_PARAM_LIST, 2, {"Q>W>E", "Q>E>W", "E>Q>W", "E>W>Q"})
- 	Menu.AutoLvL.Enable = false
+	--Menu:addSubMenu("> Auto Leveler", "AutoLvL")
+   -- Menu.AutoLvL:addParam("lvlOn", "Use Auto Leveler", SCRIPT_PARAM_ONOFF, false)
+ 	--Menu.AutoLvL:addParam("lvlMode", "Mode", SCRIPT_PARAM_LIST, 2, {"Q>W>E", "Q>E>W", "E>Q>W", "E>W>Q"})
+ 	--Menu.AutoLvL.Enable = false
  	end
     Menu:addParam("", "", SCRIPT_PARAM_INFO, "")
 	Menu:addParam("Version", "Version", SCRIPT_PARAM_INFO, version)
@@ -1167,7 +1167,7 @@ end
 -----------------------------------------------------------------------------------------------------
 if VIP_USER then
 	function SkinLoad()
-		Menu.skin:addParam('changeSkin', 'Change Skin', SCRIPT_PARAM_ONOFF, false);
+		Menu.skin:addParam('changeSkin', 'Change Skin', SCRIPT_PARAM_ONOFF, false)
 		Menu.skin:setCallback('changeSkin', function(nV)
 			if (nV) then
 				SetSkin(myHero, Menu.skin.skinID)
@@ -1186,52 +1186,7 @@ if VIP_USER then
 			SetSkin(myHero, Menu.skin.skinID)
 		end
 	end
-	function AutoLvlUp()
-		if Menu.AutoLvL.lvlOn then
-			
-			SequenceLevel = {
-			[1] = {1,2,3,1,1,4,2,1,2,3,4,1,2,3,2,4,3,3},
-			[2] = {1,3,2,1,1,4,3,1,3,2,4,1,3,2,3,4,2,2},
-			[3] = {3,1,2,3,3,4,1,3,1,2,4,3,1,2,1,4,2,2},
-			[4] = {3,2,1,3,3,4,2,3,2,1,4,3,2,1,2,4,1,1},
-			}
-			AddTickCallback(function()
-				
-				if Menu.AutoLvL.lvlOn and os.clock() - Last_LevelSpell > 0.5 then
-				  autoLevelSetSequence(SequenceLevel[Menu.AutoLvL.lvlMode])
-				  Last_LevelSpell = os.clock()  
-				elseif not Menu.AutoLvL.lvlOn then
-					autoLevelSetSequence(nil)
-				end
-				
-			end)
-
-		end
-	end
-	function CheckAutoLvl()
-	_G.GetHeroLeveled = function()
-		return player:GetSpellData(SPELL_1).level + player:GetSpellData(SPELL_2).level + player:GetSpellData(SPELL_3).level + player:GetSpellData(SPELL_4).level-1
-	end
-	_G.LevelSpell = function(id)
-	if (string.find(GetGameVersion(), 'Releases/6.6') ~= nil) and Menu.AutoLvL.lvlOn then
-		local offsets = { 
-			[_Q] = 0xF8,
-			[_W] = 0x4F,
-			[_E] = 0x14,
-			[_R] = 0x9E,
-		  }
-		  local p = CLoLPacket(0xA9)
-		  p.vTable = 0xF3981C
-		  p:EncodeF(myHero.networkID)
-		  p:Encode4(0x19)
-		  p:Encode4(0x44)
-		  p:Encode1(0xEC)
-		  p:Encode1(offsets[id])
-		  p:Encode4(0xF7)
-		  SendPacket(p)
-	end
-  end
-end
+	
 end
 --------------------------------------------- Basic Function ----------------------------------------
 -----------------------------------------------------------------------------------------------------
@@ -1386,8 +1341,6 @@ function OnLoad()
 	LoadOrb()
 	if VIP_USER then 
 		SkinLoad() 
-		CheckAutoLvl()
-		AutoLvlUp()
 	end
 end
 
