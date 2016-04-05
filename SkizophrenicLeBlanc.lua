@@ -1,5 +1,5 @@
 --[[
-version = 0.02
+version = 0.03
 author = "Mr-Skizo"
 SCRIPT_NAME = "SkizophrenicLeBlanc"
 ]]
@@ -9,9 +9,9 @@ if myHero.charName ~= "Leblanc" then return end
 --------------------------------------------- Auto Update -------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
-local version = 0.02
+local version = 0.03
 local author = "Mr-Skizo"
-local last_update = "04/04/2016"
+local last_update = "05/04/2016"
 
 function AutoUpdater()
 	local AUTOUPDATE = true
@@ -161,16 +161,18 @@ end
 --------------------------------------------- Variables ---------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
-local Rspell = 'Q'
-local CanIBack = false
-local CanIBackM = false
 function Variables()
+	Rspell = 'Q'
+	CanIBack = false
+	CanIBackM = false
+	PassiveUp = false
+	clone = nil
 	lastAttack = 0
 	lastAttackCD = 0
 	Last_LevelSpell = 0
 	VARS = 	
 	{	Q 	= 	{range = 700},
-		W 	= 	{range = 600, width = 250, speed = 1450, delay = 0.25},
+		W 	= 	{range = 750, width = 250, speed = 1450, delay = 0.25},
 		E 	= 	{range = 950, width = 55, speed= 1750, delay = 0.25}	
 	}
     Champ = { }
@@ -185,10 +187,11 @@ function Variables()
 	enemyMinions = minionManager(MINION_ENEMY, 1000, myHero, MINION_SORT_MAXHEALTH_ASC)
    	jungleMinions = minionManager(MINION_JUNGLE, 1000, myHero, MINION_SORT_MAXHEALTH_DEC)
 	
+	UPL:AddSpell(_W, {speed = VARS.W.speed, delay = VARS.W.delay, range = VARS.W.range, width = VARS.W.width, collision = false, aoe = false, type = "circular"})
 	UPL:AddSpell(_E, {speed = VARS.E.speed, delay = VARS.E.delay, range = VARS.E.range, width = VARS.E.width, collision = true, aoe = false, type = "linear"})
-    UPL:AddSpell(_W, {speed = VARS.W.speed, delay = VARS.W.delay, range = VARS.W.range, width = VARS.W.width, collision = false, aoe = false, type = "circular"})
+    
    	
-	ts = TargetSelector(TARGET_LOW_HP, 1800, DAMAGE_MAGICAL, false, true)
+	ts = TargetSelector(TARGET_LESS_CAST_PRIORITY, 1000, DAMAGE_MAGICAL, false, true)
 	target = ts.target
 	
 end
@@ -203,6 +206,7 @@ function DrawMenu()
 	
     Menu:addSubMenu("> Combo", "combo")
 	  Menu.combo:addParam('comboM', 'Combo Mode', SCRIPT_PARAM_LIST, 4, {"Q>R>W>E", "Q>W>R>E","Q>W>E>R","Smart"})
+	  Menu.combo:addParam("forceE","Force E even if target is not killable", SCRIPT_PARAM_ONOFF,true)
 	  Menu.combo:addParam("doublechaine", "Force Double E", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("C"))
 	  Menu.combo:addParam("doublezed", "Force Double Z", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("X"))
     Menu:addSubMenu("> Harass Mode", "harass")
@@ -333,16 +337,16 @@ function CastR(unit)
 end
 
 function CastSpel(unit,Spell)
-	if(Spell == 'Q') then
+	if(Spell == 'Q' and Qready) then
 		CastQ(unit)
 	end
-	if(Spell == 'W' and not CanIBack) then
+	if(Spell == 'W' and Wready and not CanIBack) then
 		CastW(unit)
 	end
-	if(Spell == 'E') then
+	if(Spell == 'E' and Eready) then
 		CastE(unit)
 	end
-	if(Spell == 'R') then
+	if(Spell == 'R' and Rready and not CanIBackM) then
 		CastR(unit)
 	end
 end
@@ -413,7 +417,7 @@ function GetComboDmg(unit)
 	return TTdmg
 end
 function IsKillable(unit)
-	if unit.health <= (GetComboDmg(unit)  + 100) then
+	if unit.health <= (GetComboDmg(unit)  + 300) then
 		return true
 	end
 	return false
@@ -562,25 +566,19 @@ function combo()
 			end
 		end		
 		if Menu.combo.comboM == 4 then
-			if(IsKillable(target) and GetDistance(target) < VARS.W.range) then
-					CastQ(target)
-					if not CanIBack then
-						CastW(target)
-					end
-					CastE(target)
-				end
 			if not Rready and target then
-				if(IsKillable(target) and GetDistance(target) < VARS.W.range) then
+				if(IsKillable(target) and GetDistance(target) < VARS.E.range) then
+					CastE(target)
 					CastQ(target)
-					if not CanIBack then
+					if not CanIBack and GetDistance(target) < VARS.W.range then
 						CastW(target)
 					end
-					CastE(target)
+					
 				end
-				if(CountAllyHeroInRange(1600) >= 1 ) then 
+				if(CountAllyHeroInRange(2000,target) >= 1 ) then 
 					if(not IsKillable(target)) then
-						if GetDistance(target) < VARS.W.range + VARS.E.range and not CanIBack and Wready and Eready then
-							CastSpell(_W, target)
+						if GetDistance(target) <= (VARS.W.range + VARS.E.range) and GetDistance(target)> VARS.E.range and not CanIBack and Wready and Eready then
+							CastW(target)
 							CastE(target)
 							if(Qready) then
 								CastQ(target)
@@ -603,18 +601,20 @@ function combo()
 						end
 						if Wready and not CanIBack then
 							CastW(target)
+						end
+						if(Menu.combo.forceE)then
 							CastE(target)
 						end
 					end
 				end
 			end
-			if Rready  and not CanIBack and target then
+			if Rready  and  target then
 				sequence = BestCombo(target)
 				if(sequence) then
 					for i, spell in pairs(sequence) do
 						CastSpel(target,spell)
 					end
-				elseif CountAllyHeroInRange(1600,target) >= 1 and GetDistance(target) <= VARS.W.range + VARS.E.range and GetDistance(target) > VARS.W.range then
+				elseif CountAllyHeroInRange(2000,target) >= 1 and GetDistance(target) <= (VARS.W.range + VARS.E.range) and GetDistance(target) >= VARS.W.range then
 					sequence = {'W','Q','E','R'}
 					for i, spell in pairs(sequence) do
 						CastSpel(target,spell)
@@ -750,7 +750,7 @@ function jungleClear()
 	if Keys() == "Laneclear" then
 	---------------Lane CLEAR	
 		for _, minion in pairs(enemyMinions.objects) do
-			if ValidTarget(minion, 1000) then
+			if ValidTarget(minion, 700) then
 					if Qready and Menu.farm.Lfarm.Qinlane then	
 						CastQ(minion)
 					end
@@ -765,7 +765,7 @@ function jungleClear()
 		end
 	---------------Jungle CLEAR		
 		for _, jminion in pairs(jungleMinions.objects) do
-			if ValidTarget(jminion, 1200) then
+			if ValidTarget(jminion, 700) then
 					if Qready and Menu.farm.Jfarm.Qinjungle then	
 						CastQ(jminion)
 					end
@@ -777,6 +777,14 @@ function jungleClear()
 					end
 			end
 		end	
+	end
+end
+
+function clonecontrole()
+	if(clone and PassiveUp) then
+	SendMsg(clone)
+		clone.MoveTo(mousePos.x, mousePos.z)
+		--clone:HoldPosition()
 	end
 end
 --------------------------------------------- VIP Function ------------------------------------------
@@ -889,6 +897,22 @@ function OnDraw()
 	end
 end
 
+function OnCreateObj(object)
+	-- if(myHero.health <= (myHero.maxHealth *40 /100))then
+		-- if object.name== "LeBlanc_Base_P_Image.troy" then
+			-- clone = object
+			-- PassiveUp = true
+			
+		-- end
+		-- if object.name=="LeBlanc_Base_P_imageDeath.troy" then
+			-- clone = nil
+			-- PassiveUp = false
+		-- end
+	-- end
+end
+
+
+
 function OnTick()
 	ts:update()
 	Checks()
@@ -901,6 +925,7 @@ function OnTick()
 	doubleZed()
 	jungleClear()
 	TryToRun()
+	--clonecontrole()
 end 
 
 
