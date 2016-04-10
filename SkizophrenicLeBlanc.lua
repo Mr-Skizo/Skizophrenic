@@ -1,5 +1,5 @@
 --[[
-version = 0.03
+version = 0.04
 author = "Mr-Skizo"
 SCRIPT_NAME = "SkizophrenicLeBlanc"
 ]]
@@ -9,9 +9,9 @@ if myHero.charName ~= "Leblanc" then return end
 --------------------------------------------- Auto Update -------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
-local version = 0.03
+local version = 0.04
 local author = "Mr-Skizo"
-local last_update = "05/04/2016"
+local last_update = "10/04/2016"
 
 function AutoUpdater()
 	local AUTOUPDATE = true
@@ -51,6 +51,7 @@ TrackerLoad("FQlQOrlhcKIwUVOU")
 
 local OrbWalkers = {}
 local LoadedOrb = nil
+local Ignite = nil
 
 function LoadOrb()
   if OrbWalkers[Menu.Orbwalkers.Orbwalker] == "SAC" then
@@ -172,8 +173,9 @@ function Variables()
 	Last_LevelSpell = 0
 	VARS = 	
 	{	Q 	= 	{range = 700},
-		W 	= 	{range = 750, width = 250, speed = 1450, delay = 0.25},
-		E 	= 	{range = 950, width = 55, speed= 1750, delay = 0.25}	
+		W 	= 	{range = 600, width = 250, speed = 1450, delay = 0.25 , DMGrange = 750},
+		E 	= 	{range = 950, width = 55, speed= 1750, delay = 0.25},
+		AA 	= 	{range = 525}		
 	}
     Champ = { }
     Passive = { }
@@ -183,17 +185,22 @@ function Variables()
         Champ[i] = enemy.charName
     end
    	
-	myEnemyTable = GetEnemyHeroes()
 	enemyMinions = minionManager(MINION_ENEMY, 1000, myHero, MINION_SORT_MAXHEALTH_ASC)
    	jungleMinions = minionManager(MINION_JUNGLE, 1000, myHero, MINION_SORT_MAXHEALTH_DEC)
 	
-	UPL:AddSpell(_W, {speed = VARS.W.speed, delay = VARS.W.delay, range = VARS.W.range, width = VARS.W.width, collision = false, aoe = false, type = "circular"})
+	UPL:AddSpell(_W, {speed = VARS.W.speed, delay = VARS.W.delay, range = VARS.W.DMGrange, width = VARS.W.width, collision = false, aoe = false, type = "circular"})
 	UPL:AddSpell(_E, {speed = VARS.E.speed, delay = VARS.E.delay, range = VARS.E.range, width = VARS.E.width, collision = true, aoe = false, type = "linear"})
     
    	
 	ts = TargetSelector(TARGET_LESS_CAST_PRIORITY, 1000, DAMAGE_MAGICAL, false, true)
 	target = ts.target
-	
+	forcedTarget = nil
+	forcedTargetTime = os.clock()
+	if string.lower(myHero:GetSpellData(SUMMONER_1).name) == string.lower("SummonerDot") then 
+		Ignite = SUMMONER_1 
+	elseif string.lower(myHero:GetSpellData(SUMMONER_2).name) == string.lower("SummonerDot") then
+		Ignite = SUMMONER_2
+	end
 end
 
 
@@ -206,38 +213,70 @@ function DrawMenu()
 	
     Menu:addSubMenu("> Combo", "combo")
 	  Menu.combo:addParam('comboM', 'Combo Mode', SCRIPT_PARAM_LIST, 4, {"Q>R>W>E", "Q>W>R>E","Q>W>E>R","Smart"})
+	  Menu.combo:addParam("doublechaine", "ChaineZ combo (Double E)", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("C"))
+	  Menu.combo:addParam("doublezed", "AOEPOP combo (Double W)", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("X"))
+	  Menu.combo:addParam("", "", SCRIPT_PARAM_INFO, "")
 	  Menu.combo:addParam("forceE","Force E even if target is not killable", SCRIPT_PARAM_ONOFF,true)
-	  Menu.combo:addParam("doublechaine", "Force Double E", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("C"))
-	  Menu.combo:addParam("doublezed", "Force Double Z", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("X"))
-    Menu:addSubMenu("> Harass Mode", "harass")
+	  if Ignite then 
+		Menu.combo:addParam("UseIgnite", "Use Ignite in Combo", SCRIPT_PARAM_ONOFF, true)
+	  end
+	  
+	  
+    
+	Menu:addSubMenu("> Harass Mode", "harass")
 	 Menu.harass:addParam("harassQ","Use Q", SCRIPT_PARAM_ONOFF,true)
 	 Menu.harass:addParam("harassW","Use W", SCRIPT_PARAM_ONOFF,true)
 	 Menu.harass:addParam("harassW2","Back to W pos", SCRIPT_PARAM_ONOFF,true)
-	UPL:AddToMenu(Menu, "> Predictions")
-    Menu:addSubMenu("> TargetSelector", "TargetSelector")
-	Menu:addSubMenu("> LaneClear/JungleClear", "farm")
-	Menu.farm:addSubMenu("> JungleClear", "Jfarm")
-	 Menu.farm.Jfarm:addParam("Qinjungle","Use Q", SCRIPT_PARAM_ONOFF,true)
-	 Menu.farm.Jfarm:addParam("Winjungle","Use W", SCRIPT_PARAM_ONOFF,true)
-	 Menu.farm.Jfarm:addParam("Einjungle","Use E", SCRIPT_PARAM_ONOFF,true)	
+	
+	Menu:addSubMenu("> Farming", "farm")	
+	Menu.farm:addSubMenu("> Last Hit", "LHfarm")
+	 Menu.farm.LHfarm:addParam("QinLH","Use Q", SCRIPT_PARAM_ONOFF,false)
+	 Menu.farm.LHfarm:addParam("WinLH","Use W", SCRIPT_PARAM_ONOFF,false)
+	 Menu.farm.LHfarm:addParam("LHAACD", "Only if can't AA", SCRIPT_PARAM_ONOFF, true)
 	Menu.farm:addSubMenu("> LaneClear", "Lfarm")
 	 Menu.farm.Lfarm:addParam("Qinlane","Use Q", SCRIPT_PARAM_ONOFF,false)
 	 Menu.farm.Lfarm:addParam("Winlane","Use W", SCRIPT_PARAM_ONOFF,false)
-	 Menu.farm.Lfarm:addParam("Einlane","Use E", SCRIPT_PARAM_ONOFF,false)
-    Menu:addSubMenu("> Draws Settings", "draws")
-      Menu.draws:addParam("DisRang", "Disable All Range Draw", SCRIPT_PARAM_ONOFF, false) 
-	  Menu.draws:addParam("DrawQ", "Draw Q Rang", SCRIPT_PARAM_ONOFF, true)
-	  Menu.draws:addParam("DrawW", "Draw W rang", SCRIPT_PARAM_ONOFF, true)
-	  Menu.draws:addParam("DrawE", "Draw E rang", SCRIPT_PARAM_ONOFF, true)
-	  Menu.draws:addParam('drawType', 'Draw Type', SCRIPT_PARAM_LIST, 2, {"Lag Free", "Normal"})		
-	Menu:addSubMenu("> Damage Draw","dmgdraw")
-		Menu.dmgdraw:addParam("drawit", "Draw dmg in hp bar", SCRIPT_PARAM_ONOFF, true)
+	 Menu.farm.Lfarm:addParam("Rinlane","Use R W", SCRIPT_PARAM_ONOFF,false)
+	 Menu.farm.Lfarm:addParam("WinlaneCount", "Min minions to W", SCRIPT_PARAM_SLICE, 3, 0, 30, 0)
+	 Menu.farm.Lfarm:addParam("RinlaneCount", "Min minions to R", SCRIPT_PARAM_SLICE, 5, 0, 30, 0)
+	 
+	Menu.farm:addSubMenu("> JungleClear", "Jfarm")
+	 Menu.farm.Jfarm:addParam("Qinjungle","Use Q", SCRIPT_PARAM_ONOFF,true)
+	 Menu.farm.Jfarm:addParam("Winjungle","Use W", SCRIPT_PARAM_ONOFF,true)
+	 Menu.farm.Jfarm:addParam("Einjungle","Use E", SCRIPT_PARAM_ONOFF,true) 	 
+	 Menu.farm.Jfarm:addParam("Rinjungle","Use R", SCRIPT_PARAM_ONOFF,false)
+	
 	Menu:addSubMenu("> Steal","Steal")
 		Menu.Steal:addParam("KillSteal", "Kill Steal", SCRIPT_PARAM_ONOFF, false)
-		Menu.Steal:addParam("JungleSteal", "Jungle Steal", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("T"))
+		Menu.Steal:addParam("JungleSteal", "Jungle Steal", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("T")) 
+	
+	UPL:AddToMenu(Menu, "> Predictions")
+    Menu:addSubMenu("> TargetSelector", "TargetSelector")
+	 Menu.TargetSelector:addParam("useChat","Use chat for forced target change", SCRIPT_PARAM_ONOFF, true)
+	 Menu.TargetSelector:addParam("ephemeralTarget","Ephemeral Forced Target", SCRIPT_PARAM_ONOFF, true)
+	 Menu.TargetSelector:addParam("ephemeralTargetSec", "Auto reset forced target (s)", SCRIPT_PARAM_SLICE, 10, 0, 30, 0)
+    Menu:addSubMenu("> Drawing", "draws")
+     Menu.draws:addParam("DisRang", "Disable All Draw", SCRIPT_PARAM_ONOFF, false) 
+	 Menu.draws:addParam('drawType', 'Draw Type', SCRIPT_PARAM_LIST, 2, {"Lag Free", "Normal"})
+	 Menu.draws:addParam("DrawQ", "Draw Q Rang", SCRIPT_PARAM_ONOFF, true)
+	 Menu.draws:addParam("DrawW", "Draw W rang", SCRIPT_PARAM_ONOFF, true)
+	 Menu.draws:addParam("DrawE", "Draw E rang", SCRIPT_PARAM_ONOFF, true)
+	 Menu.draws:addParam("", "", SCRIPT_PARAM_INFO, "")
+	 Menu.draws:addParam("DrawTarget" , "Draw Forced Target", SCRIPT_PARAM_ONOFF, true) 
+	 Menu.draws:addParam("2", "", SCRIPT_PARAM_INFO, "")	 
+	 Menu.draws:addParam("drawSafeZone", "Draw safe zone", SCRIPT_PARAM_ONOFF, true)
+	Menu:addSubMenu("> Safe Zone","misc")
+	 Menu.misc:addParam("safeZone", "Active Safe Zone", SCRIPT_PARAM_ONOFF, true)
+	 Menu.misc:addParam("safeZoneRange", "Safe Zone Range", SCRIPT_PARAM_SLICE, 425, 0, 1000, 0)
+	 --Menu.misc:addParam("drawit", "Draw dmg in hp bar", SCRIPT_PARAM_ONOFF, true)
+	
 	
     if VIP_USER then
-    Menu:addSubMenu("> Skin Changer", "skin")
+		Menu:addSubMenu("> Skin Changer", "skin")
+		Menu:addSubMenu("> Level Up", "LVLUP")
+		Menu.LVLUP:addParam("lvlOn", "Use Auto Leveler", SCRIPT_PARAM_ONOFF, false)
+		Menu.LVLUP:addParam("lvlMode", "Mode", SCRIPT_PARAM_LIST, 2, {"Q>W>E", "W>Q>E"})
+		--Menu.misc.Enable = false
  	end
     Menu:addParam("", "", SCRIPT_PARAM_INFO, "")
 	Menu:addParam("Version", "Version", SCRIPT_PARAM_INFO, version)
@@ -273,6 +312,27 @@ function Checks()
 	end	
 	enemyMinions:update()
     jungleMinions:update()
+	if(forcedTarget) then
+		if(not forcedTarget.visible or forcedTarget.dead or GetDistance(forcedTarget, myHero) >= 5000) then
+			if (GetDistance(forcedTarget, myHero) >= 5000) then
+				if(Menu.TargetSelector.useChat) then
+					SendMsg("Deselected target: " .. forcedTarget.charName .." to far from you")
+				end
+			else
+				if(Menu.TargetSelector.useChat) then
+					SendMsg("Deselected target: " .. forcedTarget.charName)
+				end
+			end
+			forcedTarget = nil
+			ts:update()
+			target = ts.target
+		else
+			target = forcedTarget
+		end
+	else
+		ts:update()
+		target = ts.target
+	end
 	
 end
 
@@ -292,6 +352,7 @@ function CountEnemyHeroInRange(range, object)
     end
     return enemyInRange
 end
+
 function CountAllyHeroInRange(range, object)
     local object = object or myHero
     local range = range and range * range or myHero.range * myHero.range
@@ -304,21 +365,25 @@ function CountAllyHeroInRange(range, object)
     end
     return AllyInRange
 end
+
 function CastQ(unit)
   		CastSpell(_Q, unit)
 end
+
 function CastW(unit)
   	local Pos, HitChance, HeroPosition = UPL:Predict(_W, myHero, unit)
 	if HitChance > 0 then
   		CastSpell(_W, Pos.x, Pos.z)
 	end
 end
+
 function CastE(unit)
   	local Pos, HitChance, HeroPosition = UPL:Predict(_E, myHero, unit)
 	if HitChance > 0 then
   		CastSpell(_E, Pos.x, Pos.z)
   	end
 end
+
 function CastR(unit)
 	if(Rspell == 'Q') then
 		CastSpell(_R, unit)
@@ -359,7 +424,6 @@ function TargetMarked(unit)
         end
 end
 
-
 function Qdmg(unit)
 	QTdmg = getDmg("Q", unit, myHero)
 	if TargetMarked(unit) then
@@ -367,14 +431,17 @@ function Qdmg(unit)
 	end
 	return QTdmg
 end
+
 function Wdmg(unit)
 	WTdmg = getDmg("W", unit, myHero)
 	return WTdmg
 end
+
 function Edmg(unit)
 	ETdmg = getDmg("E", unit, myHero)
 	return ETdmg
 end
+
 function GetUltimateDamage(unit, Rspell)
 	RTdmg = 0
 	Rlvl = myHero:GetSpellData(_R).level
@@ -395,6 +462,7 @@ function GetUltimateDamage(unit, Rspell)
 	--SendMsg(RTdmg)
 	return RTdmg
 end
+
 function GetComboDmg(unit)
 	TTdmg = 0
 	if ValidTarget(unit) then
@@ -411,17 +479,21 @@ function GetComboDmg(unit)
 			RTdmg =  GetUltimateDamage(unit, Rspell)
 			TTdmg = TTdmg + RTdmg
 		end
-			
+		if(Ignite) then
+			TTdmg = TTdmg + (50 + (20*myHero.level))
+		end
 	end
 	--SendMsg(TTdmg)
 	return TTdmg
 end
+
 function IsKillable(unit)
 	if unit.health <= (GetComboDmg(unit)  + 300) then
 		return true
 	end
 	return false
 end
+
 function GetHPBarPos(enemy)
     enemy.barData = {PercentageOffset = {x = -0.05, y = 0}}
     local barPos = GetUnitHPBarPos(enemy)
@@ -492,15 +564,15 @@ function DrawLineHPBar(damage, text, unit, enemyteam)
 end
 
 function BestCombo(unit)
-	if GetDistance(unit) <= VARS.Q.range + VARS.W.range and GetDistance(unit) > VARS.Q.range then
+	if GetDistance(unit) <= VARS.Q.range + VARS.W.DMGrange and GetDistance(unit) > VARS.Q.range then
 		if unit.health < Qdmg(unit)+ GetUltimateDamage(unit,'Q') + Edmg(unit) then
 			return {'W','Q','R','E'}
 		end
-	elseif GetDistance(unit) <= VARS.Q.range and GetDistance(unit) > VARS.W.range then
+	elseif GetDistance(unit) <= VARS.Q.range and GetDistance(unit) > VARS.W.DMGrange then
 		if unit.health < Qdmg(unit) + GetUltimateDamage(unit,'Q') + Edmg(unit) then
 			return {'Q','R','W','E'}
 		end
-	elseif GetDistance(unit) <= VARS.W.range then
+	elseif GetDistance(unit) <= VARS.W.DMGrange then
 		if unit.health < Qdmg(unit) + GetUltimateDamage(unit,'Q') + Edmg(unit) + Wdmg(unit) then
 			return {'Q','R','W','E'}
 		elseif  unit.health < Qdmg(unit) + GetUltimateDamage(unit,'W') + Edmg(unit) + Wdmg(unit) then
@@ -508,6 +580,56 @@ function BestCombo(unit)
 		end
 	end
 	return nil
+end
+
+function CanAA()
+   return (GetTickCount() + GetLatency() * 0.5 > lastAttack + lastAttackCD)
+end
+
+function GetBestAOEPosition(objects, range, radius, source)
+	local pos = nil 
+	local count2 = 0
+	local source = source or myHero
+	local range = (range and range * range) or myHero.range * myHero.range
+
+	for i, object in ipairs(objects) do
+		if GetDistanceSqr(object, source) < range then
+			local count = 0
+			for i, ob in ipairs(objects) do
+				if GetDistanceSqr(ob, object) <= radius * radius then
+					count = count + 1
+				end 
+			end 
+			if count > count2 then
+				count2 = count
+				pos = object.pos
+			end 
+		end
+	end 
+
+	return pos, count2
+end 
+
+function ephemeralTarget()
+  if forcedTarget and Menu.TargetSelector.ephemeralTarget then
+    if forcedTargetTime + Menu.TargetSelector.ephemeralTargetSec < os.clock() then
+		if(Menu.TargetSelector.useChat) then
+			SendMsg("Ephemeral Target On. ".. forcedTarget.charName .. " Deselected")
+		end
+      forcedTarget = nil
+    end
+  end
+end
+
+function AutoIgnite(target)
+  if Ignite == nil then return end
+    if not target.dead and target.visible then
+      if GetDistance(target,myHero) <= 600 then
+        if (target.health <= (50 + (20*myHero.level))  and Ignite ~= nil and myHero:CanUseSpell(Ignite) == READY and ValidTarget(target, 600)) then 
+          CastSpell(Ignite, target)
+        end
+      end 
+    end
 end
 
 --------------------------------------------- Feature Function --------------------------------------
@@ -523,6 +645,9 @@ end
 function combo()
 	if not target then return end
 	if Keys() == "Combo" then
+		if(Menu.combo.UseIgnite) then
+			AutoIgnite(target)
+		end
 		if Menu.combo.comboM == 1 and ValidTarget(target, VARS.Q.range) and target and GetDistance(target) <= VARS.Q.range then
 			if Qready then
 				CastQ(target)
@@ -537,7 +662,7 @@ function combo()
 				CastE(target)
 			end
 		end
-		if Menu.combo.comboM == 2 and ValidTarget(target, VARS.W.range) and target and GetDistance(target) <= VARS.W.range then
+		if Menu.combo.comboM == 2 and ValidTarget(target, VARS.W.DMGrange ) and target and GetDistance(target) <= VARS.W.DMGrange  then
 			if Qready then
 				CastQ(target)
 			end
@@ -551,7 +676,7 @@ function combo()
 				CastE(target)
 			end
 		end
-		if Menu.combo.comboM == 3 and ValidTarget(target, VARS.W.range) and target and GetDistance(target) <= VARS.W.range then
+		if Menu.combo.comboM == 3 and ValidTarget(target, VARS.W.DMGrange) and target and GetDistance(target) <= VARS.W.DMGrange then
 			if Qready then
 				CastQ(target)
 			end
@@ -570,14 +695,14 @@ function combo()
 				if(IsKillable(target) and GetDistance(target) < VARS.E.range) then
 					CastE(target)
 					CastQ(target)
-					if not CanIBack and GetDistance(target) < VARS.W.range then
+					if not CanIBack and GetDistance(target) < VARS.W.DMGrange then
 						CastW(target)
 					end
 					
 				end
 				if(CountAllyHeroInRange(2000,target) >= 1 ) then 
 					if(not IsKillable(target)) then
-						if GetDistance(target) <= (VARS.W.range + VARS.E.range) and GetDistance(target)> VARS.E.range and not CanIBack and Wready and Eready then
+						if GetDistance(target) <= (VARS.W.DMGrange + VARS.E.range ) and GetDistance(target)> VARS.E.range and not CanIBack and Wready and Eready then
 							CastW(target)
 							CastE(target)
 							if(Qready) then
@@ -595,7 +720,7 @@ function combo()
 						end	
 					end
 				elseif not IsKillable(target) then
-					if(GetDistance(target) <= VARS.W.range) then
+					if(GetDistance(target) <= VARS.W.DMGrange) then
 						if(Qready) then
 							CastQ(target)
 						end
@@ -614,12 +739,12 @@ function combo()
 					for i, spell in pairs(sequence) do
 						CastSpel(target,spell)
 					end
-				elseif CountAllyHeroInRange(2000,target) >= 1 and GetDistance(target) <= (VARS.W.range + VARS.E.range) and GetDistance(target) >= VARS.W.range then
+				elseif CountAllyHeroInRange(2000,target) >= 1 and GetDistance(target) <= (VARS.W.DMGrange + VARS.E.range) and GetDistance(target) >= VARS.W.DMGrange then
 					sequence = {'W','Q','E','R'}
 					for i, spell in pairs(sequence) do
 						CastSpel(target,spell)
 					end
-				elseif GetDistance(target) <= VARS.W.range then
+				elseif GetDistance(target) <= VARS.W.DMGrange then
 					sequence = {'Q','W','R','E'}
 					for i, spell in pairs(sequence) do
 						CastSpel(target,spell)
@@ -633,7 +758,7 @@ function combo()
 end
 
 function DrawLifeBar()
-	if Menu.dmgdraw.drawit then
+	if Menu.draws.drawit then
         for i, unit in pairs(myEnemyTable) do
             if ValidTarget(unit) and GetDistance(unit) <= 2500 then
 				DrawLineHPBar(GetComboDmg(unit),"", unit, true)	
@@ -649,10 +774,10 @@ function KillSteal()
                         if Qready and GetDistance(unit) <VARS.Q.range and ValidTarget(unit) and unit.health <= Qdmg(unit) then
                             CastQ(unit)
 						end
-						if Wready and GetDistance(unit) <= VARS.W.range and ValidTarget(unit) and unit.health <= Wdmg(unit) then
+						if Wready and GetDistance(unit) <= VARS.W.DMGrange and ValidTarget(unit) and unit.health <= Wdmg(unit) then
 							CastW(unit)
 						end
-						if Qready and Wready and GetDistance(unit) <VARS.Q.range + VARS.W.range and ValidTarget(unit) and unit.health <= Qdmg(unit) then
+						if Qready and Wready and GetDistance(unit) <VARS.Q.range + VARS.W.DMGrange and ValidTarget(unit) and unit.health <= Qdmg(unit) then
                             CastW(unit)
 							CastQ(unit)
 						end
@@ -685,8 +810,24 @@ function harass()
 					CastQ(target)
 				end
 			end
-			if Menu.harass.harassW  then
-				if Wready and GetDistance(target) <= VARS.W.range then 
+			if Menu.harass.harassW and Menu.harass.harassQ  then
+				if Wready and not Qready and GetDistance(target) <= (VARS.W.DMGrange) then 
+					if(Menu.harass.harassW2) then
+						if(TargetMarked(target)) then
+							CastW(target)
+						end
+						if(CanIBack) then
+							CastW(target)
+						end
+					elseif(not CanIBack) then
+						if(TargetMarked(target)) then
+							CastW(target)
+						end
+					end
+					
+				end
+			elseif Menu.harass.harassW then
+				if Wready and GetDistance(target) <= (VARS.W.DMGrange) then 
 					if(Menu.harass.harassW2) then
 						CastW(target)
 					elseif(not CanIBack) then
@@ -699,9 +840,9 @@ function harass()
 end
 
 function doubleChaine()
-	if not target then return end
 	if  Menu.combo.doublechaine then
 		myHero:MoveTo(mousePos.x, mousePos.z)
+		if not target then return end
 		if Rready  and GetDistance(target)< VARS.E.range and target then
 			if Eready then
 				CastE(target)
@@ -723,10 +864,10 @@ function doubleChaine()
 end
 
 function doubleZed()
-	if not target then return end
 	if  Menu.combo.doublezed then
 		myHero:MoveTo(mousePos.x, mousePos.z)
-		if Rready  and GetDistance(target)< VARS.W.range and target then
+		if not target then return end
+		if Rready  and GetDistance(target)< VARS.W.DMGrange and target then
 			if Wready and not CanIBack then
 				CastW(target)
 			end
@@ -746,34 +887,96 @@ function doubleZed()
 	end            
 end
 
-function jungleClear()
-	if Keys() == "Laneclear" then
-	---------------Lane CLEAR	
-		for _, minion in pairs(enemyMinions.objects) do
-			if ValidTarget(minion, 700) then
-					if Qready and Menu.farm.Lfarm.Qinlane then	
-						CastQ(minion)
-					end
-					if Wready and Menu.farm.Lfarm.Winlane then	
-						CastW(minion)
-					end
-					if Eready and Menu.farm.Lfarm.Einlane then	
-						CastE(minion)
-					end		
+function lastHit()
+	if Keys() == "Lasthit" then
+		for i, minion in pairs(enemyMinions.objects) do
+			if(Menu.farm.LHfarm.LHAACD and not CanAA()) then
+				if minion  and Menu.farm.LHfarm.QinLH and not CanAA()then
+					DelayAction(function()
+						if Qdmg(minion) > minion.health and Qready and not CanAA() and not minion.dead then
+						  CastQ(minion)
+						  return
+						end
+					end,0.5)
+				end	
+				if minion  and Menu.farm.LHfarm.WinLH and not CanAA() then
+					DelayAction(function()	
+						if Wdmg(minion) > minion.health and Wready and not Qready and not CanAA() and not minion.dead then
+						  CastW(minion)
+						  return
+						end
+					end,2)
+					
+				end
 			end
-		
+			if(not Menu.farm.LHfarm.LHAACD) then
+				if minion  and Menu.farm.LHfarm.QinLH then
+					DelayAction(function()
+						if Qdmg(minion) > minion.health and Qready and not minion.dead then
+						  CastQ(minion)
+						  return
+						end
+					end,0.5)
+				end	
+				if minion  and Menu.farm.LHfarm.WinLH  then
+					DelayAction(function()	
+						if Wdmg(minion) > minion.health and Wready and not minion.dead then
+						  CastW(minion)
+						  return
+						end
+					end,2)
+					
+				end
+			end
 		end
-	---------------Jungle CLEAR		
+	end
+end
+
+function laneClear()
+	if Keys() == "Laneclear" then
+		if Qready and Menu.farm.Lfarm.Qinlane then	
+			for i, Jminion in ipairs(enemyMinions.objects) do
+			  if GetDistance(Jminion) < VARS.Q.range and not CanAA() then
+				CastSpell(_Q, Jminion)
+				break
+			  end
+			end
+		end
+		if Wready and Menu.farm.Lfarm.Winlane and not CanAA() then	
+			local bestPos, minionCount = GetBestAOEPosition(enemyMinions.objects, VARS.W.range, VARS.W.width, myHero)
+			if bestPos and minionCount >= Menu.farm.Lfarm.WinlaneCount and not CanAA() then
+			  CastSpell(_W, bestPos.x, bestPos.z)
+			  CastSpell(_W)
+			end
+		end
+		if Rready and Rspell == 'W' and Menu.farm.Lfarm.Rinlane and not CanAA() then	
+			local bestPos, minionCount = GetBestAOEPosition(enemyMinions.objects, VARS.W.range, VARS.W.width, myHero)
+			if bestPos and minionCount >= Menu.farm.Lfarm.WinlaneCount and not CanAA() then
+			  CastSpell(_R, bestPos.x, bestPos.z)
+			  CastSpell(_R)
+			end
+		end
+			
+	end
+end
+
+function jungleClear()
+	if Keys() == "Laneclear" then	
 		for _, jminion in pairs(jungleMinions.objects) do
 			if ValidTarget(jminion, 700) then
-					if Qready and Menu.farm.Jfarm.Qinjungle then	
+					if Qready and Menu.farm.Jfarm.Qinjungle and not CanAA() then	
 						CastQ(jminion)
 					end
-					if Wready and Menu.farm.Jfarm.Winjungle then
+					if Wready and Menu.farm.Jfarm.Winjungle and not CanIBack and not CanAA() then
 						CastW(jminion)
 					end
-					if Eready and Menu.farm.Jfarm.Einjungle then
-						CastE(jminion)
+					if Rready and Menu.farm.Jfarm.Rinjungle and not CanIBackM and not CanAA() and Rspell == 'W' then
+						CastR(jminion)
+					end
+					if Eready and Menu.farm.Jfarm.Einjungle and not CanAA() then
+						DelayAction(function()
+							CastE(jminion)
+						end,1)
 					end
 			end
 		end	
@@ -781,10 +984,25 @@ function jungleClear()
 end
 
 function clonecontrole()
-	if(clone and PassiveUp) then
-	SendMsg(clone)
-		clone.MoveTo(mousePos.x, mousePos.z)
-		--clone:HoldPosition()
+	--if(clone and PassiveUp) then
+	-- local p = CLoLPacket(0x127)
+	--		p.vTable = 0xF0929C
+		--	p:EncodeF(myHero.networkID)
+		--	p:Encode1(items[Item][1])--Item Specific
+		--	p:Encode1(items[Item][2])--Item Specific
+		--	for i = 1, 2 do p:Encode1(0x1E) end
+		--	for i = 1, 4 do p:Encode1(0x00) end
+		--	SendPacket(p) 
+      
+    
+	--end
+end
+
+function safeZone()
+	if Menu.misc.safeZone and target then
+		if not Keys() and not Wready and Eready and GetDistance(target) <= Menu.misc.safeZoneRange then
+			CastE(target)
+		end
 	end
 end
 --------------------------------------------- VIP Function ------------------------------------------
@@ -812,11 +1030,38 @@ if VIP_USER then
 			SetSkin(myHero, Menu.skin.skinID)
 		end
 	end
+	
+	function AutoLvlUp()
+		if VIP_USER and os.clock()-Last_LevelSpell > 0.5 then
+			if Menu.LVLUP.lvlOn then
+				autoLevelSetSequence(levelSequence)
+				Last_LevelSpell = os.clock()
+			elseif not Menu.LVLUP.lvlOn then
+				autoLevelSetSequence(nil)
+				Last_LevelSpell = os.clock()+10
+			end
+		end
+	end
+
+	function CheckAutoLvl()
+		if Menu.LVLUP.lvlModeo == 1 then
+			levelSequence =  {1,2,3,1,1,4,2,1,2,3,4,1,2,3,2,4,3,3}
+		elseif Menu.LVLUP.lvlMode == 2 then			
+			levelSequence =  {2,1,3,2,2,4,1,2,1,3,4,2,1,3,1,4,3,3}
+		else 
+			return 
+		end
+	end
+	
 end
 
 --------------------------------------------- Basic Function ----------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
+function OnIssueOrder(unit, iAction, targetPos, Target)
+    
+	--SendMsg(unit.name)
+end
 
 function OnProcessSpell(unit,spell)
         if unit.isMe and spell.name == "LeblancChaosOrb" then
@@ -883,7 +1128,7 @@ function OnDraw()
 				if(Menu.draws.drawType == 2)then
 					DrawCircle(myHero.x, myHero.y, myHero.z, VARS.W.range, 0x111111)
 				else
-					DrawCircle3D(myHero.x, myHero.y, myHero.z, 900, 2)
+					DrawCircle3D(myHero.x, myHero.y, myHero.z, VARS.W.range, 2)
 				end	
 			end
 			if(Menu.draws.DrawE and Eready) then
@@ -893,31 +1138,65 @@ function OnDraw()
 					DrawCircle3D(myHero.x, myHero.y, myHero.z, VARS.E.range, 2)
 				end	
 			end
-		DrawLifeBar()
+			if Menu.draws.drawSafeZone and Menu.misc.safeZone then
+				if(Menu.draws.drawType == 2)then
+					DrawCircle(myHero.x, myHero.y, myHero.z, Menu.misc.safeZoneRange, 0x111111)
+				else
+					DrawCircle3D(myHero.x, myHero.y, myHero.z, Menu.misc.safeZoneRange, 2)
+				end	
+			end
+			DrawLifeBar()
+			if forcedTarget and Menu.draws.DrawTarget then
+				DrawCircle3D(forcedTarget.x, forcedTarget.y, forcedTarget.z, 50, 2)
+			end
 	end
 end
 
 function OnCreateObj(object)
-	-- if(myHero.health <= (myHero.maxHealth *40 /100))then
-		-- if object.name== "LeBlanc_Base_P_Image.troy" then
-			-- clone = object
-			-- PassiveUp = true
+		 if object.name== "LeBlanc_Base_P_Image.troy" then
+			SendMsg("up")
+			 clone = object
+			 PassiveUp = true
 			
-		-- end
-		-- if object.name=="LeBlanc_Base_P_imageDeath.troy" then
-			-- clone = nil
-			-- PassiveUp = false
-		-- end
-	-- end
+		 end
+		 if object.name=="LeBlanc_Base_P_imageDeath.troy" then
+			 SendMsg("down")
+			 clone = nil
+			 PassiveUp = false
+		 end
+	 
 end
 
-
+function OnWndMsg(key , msg)
+  if key == WM_LBUTTONDOWN  then
+    local enemySelected
+    for i, enemy in pairs(myEnemyTable) do
+      if enemy and enemy.visible and not enemy.dead and ValidTarget(enemy) and GetDistanceSqr(enemy, mousePos) <= 40000 then
+        enemySelected = enemy
+      end
+    end
+    if enemySelected and GetDistanceSqr(enemySelected, mousePos) < 40000 then
+      if forcedTarget and enemySelected.networkID == forcedTarget.networkID then
+        forcedTarget = nil
+		if(Menu.TargetSelector.useChat) then
+			SendMsg("Deselected target: " .. enemySelected.charName)
+		end
+      else
+        forcedTarget = enemySelected
+		if(Menu.TargetSelector.useChat) then
+			SendMsg("Selected target: " .. enemySelected.charName)
+		end
+        forcedTargetTime = os.clock()
+      end
+    end
+  end
+end
 
 function OnTick()
-	ts:update()
-	Checks()
-	target = ts.target	
+	Checks()	
 	combo()
+	lastHit()
+	laneClear()
 	harass()
 	KillSteal()
 	JungleSteal()
@@ -925,7 +1204,10 @@ function OnTick()
 	doubleZed()
 	jungleClear()
 	TryToRun()
-	--clonecontrole()
+	clonecontrole()
+	ephemeralTarget()
+	safeZone()
+	AutoLvlUp()
 end 
 
 
@@ -949,8 +1231,11 @@ function OnLoad()
 	LoadTableOrbs()
 	LoadOrb()
 	if VIP_USER then 
-		SkinLoad() 
+		SkinLoad()
+		CheckAutoLvl()		
 	end
+	
+
 end
 
 
