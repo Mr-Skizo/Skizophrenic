@@ -1,17 +1,17 @@
 --[[
-version = 0.04
+version = 0.05
 author = "Mr-Skizo"
 SCRIPT_NAME = "SkizophrenicLeBlanc"
 ]]
- 
+
 if myHero.charName ~= "Leblanc" then return end
 
 --------------------------------------------- Auto Update -------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
-local version = 0.04
+local version = 0.05
 local author = "Mr-Skizo"
-local last_update = "10/04/2016"
+local last_update = "13/04/2016"
 
 function AutoUpdater()
 	local AUTOUPDATE = true
@@ -29,7 +29,7 @@ function AutoUpdater()
 					SendMsg(">>Updating, please don't press F9<<")
 					DelayAction(function() DownloadFile(UPDATE_URL, UPDATE_FILE_PATH, function () SendMsg("Successfully updated. ("..version.." => "..ServerVersion.."), press F9 twice to load the updated version.") end) end, 3)
 				else
-					DelayAction(function() SendMsg("Hello, "..GetUser()..". You got the latest version! :) ("..ServerVersion..")") end, 3)
+					DelayAction(function() SendMsg("Hello, "..GetUser()..". You got the latest version! ("..ServerVersion..")") end, 3)
 				end
 			end
 			else
@@ -79,6 +79,9 @@ function LoadOrb()
   LoadedOrb = "SxOrbWalk"
   require "SxOrbWalk"
   SxOrb:LoadToMenu(Menu.Orbwalkers.SxOrbWalk)
+   elseif OrbWalkers[Menu.Orbwalkers.Orbwalker] == "S1mpleOrbWalker" then 
+   require "S1mpleOrbWalker"
+   _G.S1mpleOrbWalker:AddToMenu(Menu.Orbwalkers)
   end
 end
 
@@ -118,6 +121,11 @@ function Keys()
   if _G.SxOrb.isHarass then return "Harass" end
   if _G.SxOrb.isLaneClear then return "Laneclear" end
   if _G.SxOrb.isLastHit then return "Lasthit" end
+  elseif LoadedOrb == "S1mpleOrbWalker" then
+  if _G.S1mpleOrbWalker.aamode == "sbtw" then return "Combo" end
+  if _G.S1mpleOrbWalker.aamode == "harass" then return "Harass" end
+  if _G.S1mpleOrbWalker.aamode == "laneclear" then return "Laneclear" end
+  if _G.S1mpleOrbWalker.aamode == "lasthit"then return "Lasthit" end
   end
 end
 
@@ -142,6 +150,9 @@ function LoadTableOrbs()
   end
   if FileExist(LIB_PATH .. "/SxOrbWalk.lua") then
   table.insert(OrbWalkers, "SxOrbWalk")
+  end
+  if FileExist(LIB_PATH .. "/S1mpleOrbWalker.lua") then
+    table.insert(OrbWalkers, "S1mpleOrbWalker")
   end
   if #OrbWalkers > 0 then
   Menu:addSubMenu("> Orbwalkers", "Orbwalkers")
@@ -247,12 +258,22 @@ function DrawMenu()
 	 Menu.farm.Jfarm:addParam("Rinjungle","Use R", SCRIPT_PARAM_ONOFF,false)
 	
 	Menu:addSubMenu("> Steal","Steal")
-		Menu.Steal:addParam("KillSteal", "Kill Steal", SCRIPT_PARAM_ONOFF, false)
+		Menu.Steal:addSubMenu("> Kill Steal", "Killsteal")
+		 Menu.Steal.Killsteal:addParam("KillStealOn",  "Use KillSteal" , SCRIPT_PARAM_ONOFF, true)
+		 Menu.Steal.Killsteal:addParam("", "", SCRIPT_PARAM_INFO, "")
+		 Menu.Steal.Killsteal:addParam("Qkillsteal", "Use Q", SCRIPT_PARAM_ONOFF, true)
+		 Menu.Steal.Killsteal:addParam("Wkillsteal", "Use W", SCRIPT_PARAM_ONOFF, true)
+		 Menu.Steal.Killsteal:addParam("Ekillsteal", "Use E", SCRIPT_PARAM_ONOFF, false)
+		 Menu.Steal.Killsteal:addParam("Rkillsteal", "Use R", SCRIPT_PARAM_ONOFF, false)
+		 Menu.Steal.Killsteal:addParam("1", "", SCRIPT_PARAM_INFO, "")
+		 Menu.Steal.Killsteal:addParam("Gapcloser",  "Use W to gapcloser" , SCRIPT_PARAM_ONOFF, true)
+		 
 		Menu.Steal:addParam("JungleSteal", "Jungle Steal", SCRIPT_PARAM_ONKEYDOWN, false, string.byte("T")) 
 	
 	UPL:AddToMenu(Menu, "> Predictions")
     Menu:addSubMenu("> TargetSelector", "TargetSelector")
-	 Menu.TargetSelector:addParam("useChat","Use chat for forced target change", SCRIPT_PARAM_ONOFF, true)
+	-- Menu.TargetSelector:addParam("useChat","Use chat for forced target change", SCRIPT_PARAM_ONOFF, true)
+	 Menu.TargetSelector:addParam("annouce", "Annouce Mode", SCRIPT_PARAM_LIST, 1, {"Use Chat", "Use notification","None"})
 	 Menu.TargetSelector:addParam("ephemeralTarget","Ephemeral Forced Target", SCRIPT_PARAM_ONOFF, true)
 	 Menu.TargetSelector:addParam("ephemeralTargetSec", "Auto reset forced target (s)", SCRIPT_PARAM_SLICE, 10, 0, 30, 0)
     Menu:addSubMenu("> Drawing", "draws")
@@ -265,9 +286,12 @@ function DrawMenu()
 	 Menu.draws:addParam("DrawTarget" , "Draw Forced Target", SCRIPT_PARAM_ONOFF, true) 
 	 Menu.draws:addParam("2", "", SCRIPT_PARAM_INFO, "")	 
 	 Menu.draws:addParam("drawSafeZone", "Draw safe zone", SCRIPT_PARAM_ONOFF, true)
+	 Menu.draws:addParam("3", "", SCRIPT_PARAM_INFO, "")	
+	 Menu.draws:addParam("drawit", "Draw dmg in hp bar", SCRIPT_PARAM_ONOFF, true)
+	 Menu.draws:addParam('drawitType', 'Dmg show', SCRIPT_PARAM_LIST, 2, {"Classic", "New"})
 	Menu:addSubMenu("> Safe Zone","misc")
 	 Menu.misc:addParam("safeZone", "Active Safe Zone", SCRIPT_PARAM_ONOFF, true)
-	 Menu.misc:addParam("safeZoneRange", "Safe Zone Range", SCRIPT_PARAM_SLICE, 425, 0, 1000, 0)
+	 Menu.misc:addParam("safeZoneRange", "Safe Zone Range", SCRIPT_PARAM_SLICE, 375, 0, 1000, 0)
 	 --Menu.misc:addParam("drawit", "Draw dmg in hp bar", SCRIPT_PARAM_ONOFF, true)
 	
 	
@@ -315,12 +339,16 @@ function Checks()
 	if(forcedTarget) then
 		if(not forcedTarget.visible or forcedTarget.dead or GetDistance(forcedTarget, myHero) >= 5000) then
 			if (GetDistance(forcedTarget, myHero) >= 5000) then
-				if(Menu.TargetSelector.useChat) then
+				if(Menu.TargetSelector.annouce == 1) then
 					SendMsg("Deselected target: " .. forcedTarget.charName .." to far from you")
+				elseif (Menu.TargetSelector.annouce == 2) then
+					SendNotification("Target Selector","Deselected target: " .. forcedTarget.charName .." to far from you" , 10)
 				end
 			else
-				if(Menu.TargetSelector.useChat) then
+				if(Menu.TargetSelector.annouce == 1) then
 					SendMsg("Deselected target: " .. forcedTarget.charName)
+				elseif (Menu.TargetSelector.annouce == 2) then
+					SendNotification("Target Selector","Deselected target: " .. forcedTarget.charName , 10)
 				end
 			end
 			forcedTarget = nil
@@ -338,6 +366,22 @@ end
 
 function SendMsg(msg)
   PrintChat("Schizophrenic LeBlanc: <font color=\"#C2FDF3\"><b> "..msg..".</b></font>")
+end
+
+function LoadNotificationLib()
+	local LibPath = LIB_PATH.."NotificationLib.lua"
+	if not FileExist(LibPath) then
+		local Host = "raw.github.com"
+		local Path = "/Mr-Skizo/Skizophrenic/master/Common/NotificationLib.lua".."?rand="..math.random(1,10000)
+		DownloadFile("https://"..Host..Path, LibPath, function ()  end)
+		DelayAction(function () require("NotificationLib") end, 5)
+	else
+		require("NotificationLib")
+	end
+end
+
+function SendNotification(Header , Msg , Duration)
+	NotificationLib:AddTile(Header, Msg, Duration)
 end
 
 function CountEnemyHeroInRange(range, object)
@@ -416,6 +460,13 @@ function CastSpel(unit,Spell)
 	end
 end
 
+function GapCloser(enemy)
+  if WReady and not CanIBack then
+    local bestPos = Vector(myHero) + (Vector(enemy) - myHero):normalized() * VARS.W.range
+    CastSpell(_W, bestPos.x, bestPos.z)
+  end
+end
+
 function TargetMarked(unit)
         for i, Champ in pairs(Champ) do
                 if Champ == unit.charName then
@@ -482,8 +533,11 @@ function GetComboDmg(unit)
 		if(Ignite) then
 			TTdmg = TTdmg + (50 + (20*myHero.level))
 		end
+		if TargetHaveBuff("SummonerExhaust", myHero) then
+			TTdmg = TTdmg - ((TTdmg*40)/100)
+		end
 	end
-	--SendMsg(TTdmg)
+	
 	return TTdmg
 end
 
@@ -538,8 +592,6 @@ function DrawLineHPBar(damage, text, unit, enemyteam)
     if mytrans >= 255 then mytrans=254 end
     local my_bluepart = math.round(400*((unit.health-thedmg)/unit.maxHealth))
     if my_bluepart >= 255 then my_bluepart=254 end
- 
-   
     if enemyteam then
         linePosA.x = Offs_X-150
         linePosA.y = (StartPos.y-(30+(line*15)))    
@@ -560,6 +612,8 @@ function DrawLineHPBar(damage, text, unit, enemyteam)
         local dmgDraw = unit.health - thedmg
         if dmgDraw < 0 then dmgDraw = 0 end
     DrawLine(linePosA.x, linePosA.y, linePosB.x, linePosB.y , 2, ARGB(mytrans, 255, my_bluepart, 0))
+	
+
     DrawText("HP: "..tostring(math.ceil(dmgDraw)).." | "..tostring(text), 15, TextPos.x, TextPos.y , ARGB(mytrans, 255, my_bluepart, 0))
 end
 
@@ -613,8 +667,10 @@ end
 function ephemeralTarget()
   if forcedTarget and Menu.TargetSelector.ephemeralTarget then
     if forcedTargetTime + Menu.TargetSelector.ephemeralTargetSec < os.clock() then
-		if(Menu.TargetSelector.useChat) then
+		if(Menu.TargetSelector.annouce == 1) then
 			SendMsg("Ephemeral Target On. ".. forcedTarget.charName .. " Deselected")
+		elseif Menu.TargetSelector.annouce == 2 then
+			SendNotification("Target Selector","Ephemeral Target On. ".. forcedTarget.charName .. " Deselected", 10)
 		end
       forcedTarget = nil
     end
@@ -695,7 +751,7 @@ function combo()
 				if(IsKillable(target) and GetDistance(target) < VARS.E.range) then
 					CastE(target)
 					CastQ(target)
-					if not CanIBack and GetDistance(target) < VARS.W.DMGrange then
+					if not CanIBack and GetDistance(target) < VARS.W.DMGrange and TargetMarked(target)then
 						CastW(target)
 					end
 					
@@ -760,7 +816,11 @@ end
 function DrawLifeBar()
 	if Menu.draws.drawit then
         for i, unit in pairs(myEnemyTable) do
-            if ValidTarget(unit) and GetDistance(unit) <= 2500 then
+            if ValidTarget(unit) and GetDistance(unit) <= 3000 then
+				local dba = WorldToScreen(D3DXVECTOR3(unit.x, unit.y, unit.z))
+				local _ca = dba.x - 35
+				local aca = dba.y - 40
+				DrawText(unit.charName .. " - " .. "Distance : " .. math.ceil(GetDistance(unit)), 12, _ca, aca, ARGB(255, 255, 204, 0))
 				DrawLineHPBar(GetComboDmg(unit),"", unit, true)	
             end
 		
@@ -768,22 +828,104 @@ function DrawLifeBar()
     end
 end
 
+function DrawLifeBar2()
+	if Menu.draws.drawit then
+		for i, unit in pairs(myEnemyTable) do
+			if ValidTarget(unit) and GetDistance(unit) <= 3000 then
+				local Center = GetUnitHPBarPos(unit)
+				if Center.x > -100 and Center.x < WINDOW_W+100 and Center.y > -100 and Center.y < WINDOW_H+100 then
+					local off = GetUnitHPBarOffset(unit)
+					local y=Center.y + (off.y * 53) + 2
+					local xOff = ({['AniviaEgg'] = -0.1,['Darius'] = -0.05,['Renekton'] = -0.05,['Sion'] = -0.05,['Thresh'] = -0.03,})[unit.charName]
+					local x = Center.x + ((xOff or 0) * 140) - 66
+					dmg = unit.health - GetComboDmg(unit)
+					local mytrans = 350 - math.round(255*((unit.health-dmg)/unit.maxHealth))
+					if mytrans >= 255 then mytrans=254 end
+					local my_bluepart = math.round(400*((unit.health-dmg)/unit.maxHealth))
+					if my_bluepart >= 255 then my_bluepart=254 end
+					DrawLine(x + ((unit.health /unit.maxHealth) * 104),y, x+(((dmg > 0 and dmg or 0) / unit.maxHealth) * 104),y,9, GetDistance(unit) < 3000 and  ARGB(mytrans, 255, my_bluepart, 0))
+				end
+			end
+		end
+	end
+end
+
 function KillSteal()
-        if Menu.Steal.KillSteal then
-                for i, unit in pairs(myEnemyTable) do
-                        if Qready and GetDistance(unit) <VARS.Q.range and ValidTarget(unit) and unit.health <= Qdmg(unit) then
-                            CastQ(unit)
-						end
-						if Wready and GetDistance(unit) <= VARS.W.DMGrange and ValidTarget(unit) and unit.health <= Wdmg(unit) then
-							CastW(unit)
-						end
-						if Qready and Wready and GetDistance(unit) <VARS.Q.range + VARS.W.DMGrange and ValidTarget(unit) and unit.health <= Qdmg(unit) then
-                            CastW(unit)
-							CastQ(unit)
-						end
-                        if Eready and GetDistance(unit) <VARS.E.range and ValidTarget(unit) and unit.health <= Edmg(unit) then
-							CastE(unit)
-						end
+        if Menu.Steal.Killsteal.KillStealOn and not Keys() ~= "Combo"  then
+			local LastDeadTime = 0
+                for i, enemy in pairs(myEnemyTable) do
+					if not myHero.dead then
+                       if GetDistance(enemy) <= VARS.W.DMGrange then
+							if(Menu.Steal.Killsteal.Wkillsteal and Wready and enemy.health < Wdmg(enemy)) then
+								if(ValidTarget(enemy) and not CanIBack ) then
+									CastW(enemy)
+									LastDeadTime = os.clock()
+								end
+								if CanIBack and enemy.dead and (os.clock() - LastDeadTime ) < 1 then 
+								--	SendMsg("Dead")
+									CastSpell(_W)
+								end
+							elseif (ValidTarget(enemy) and Menu.Steal.Killsteal.Qkillsteal and Qready and enemy.health < Qdmg(enemy)) then
+								CastQ(enemy)
+							elseif (ValidTarget(enemy) and Menu.Steal.Killsteal.Ekillsteal and Eready and enemy.health < Edmg(enemy)) then
+								CastE(enemy)
+							elseif (ValidTarget(enemy) and Menu.Steal.Killsteal.Rkillsteal and Rready and enemy.health < GetUltimateDamage(enemy,Rspell) and not CanIBackM) then
+								CastR(enemy)
+							elseif (Menu.Steal.Killsteal.Wkillsteal and Menu.Steal.Killsteal.Qkillsteal and Qready and Wready and enemy.health < Qdmg(enemy)+Wdmg(enemy)) then
+								CastQ(enemy)
+								if(ValidTarget(enemy) and not CanIBack) then
+									LastDeadTime = os.clock()
+									CastW(enemy)
+								end
+								if CanIBack and enemy.dead and (os.clock() - LastDeadTime) < 1 then 
+										--SendMsg("Dead")
+										CastSpell(_W)
+								end
+							elseif(Menu.Steal.Killsteal.Wkillsteal and Menu.Steal.Killsteal.Qkillsteal and Menu.Steal.Killsteal.Ekillsteal and Eready and Qready and Wready and enemy.health < Qdmg(enemy)+Wdmg(enemy)+Edmg(enemy)) then
+								CastQ(enemy)
+								if(ValidTarget(enemy) and not CanIBack) then
+									CastW(enemy)						
+									CastE(enemy)
+								end
+								if CanIBack and enemy.dead and (os.clock() - LastDeadTime) < 1 then 
+										--SendMsg("Dead")
+										CastSpell(_W)
+								end
+							end	
+						elseif GetDistance(enemy) <= (VARS.Q.range + VARS.W.range) and Menu.Steal.Killsteal.Gapcloser and ValidTarget(enemy)then
+							if(Menu.Steal.Killsteal.Qkillsteal and Qready and enemy.health < Qdmg(enemy)) then
+								GapCloser(enemy)
+								if(GetDistance(enemy)<= VARS.Q.range) then
+									CastQ(enemy)
+								end
+							elseif (Menu.Steal.Killsteal.Ekillsteal and Eready and enemy.health < Edmg(enemy)) then
+								GapCloser(enemy)
+								if(GetDistance(enemy)<= VARS.E.range) then
+									CastE(enemy)
+								end
+							elseif (Menu.Steal.Killsteal.Qkillsteal and Menu.Steal.Killsteal.Ekillsteal and Qready and Eready and enemy.health < Qdmg(enemy)+Edmg(enemy)) then
+								GapCloser(enemy)
+								if(GetDistance(enemy)<= VARS.Q.range) then
+									CastQ(enemy)
+								end
+								if(GetDistance(enemy)<= VARS.E.range) then
+									CastE(enemy)
+								end
+							elseif (Menu.Steal.Killsteal.Qkillsteal and Menu.Steal.Killsteal.Rkillsteal and Qready and Rready and enemy.health < Qdmg(enemy)+GetUltimateDamage(enemy,Rspell) and not CanIBackM) then
+								GapCloser(enemy)
+								if(GetDistance(enemy)<= VARS.Q.range) then
+									CastQ(enemy)
+								end
+								if(Rspell == "Q" and GetDistance(enemy)<= VARS.Q.range) then
+									CastR(enemy)
+								elseif(Rspell == "W" and GetDistance(enemy)<= VARS.W.range and not CanIBackM) then
+									CastR(enemy)
+								elseif(Rspell == "E" and GetDistance(enemy)<= VARS.E.range) then
+									CastR(enemy)
+								end	
+							end
+					   end
+					end
                 end
         end
 end
@@ -868,11 +1010,12 @@ function doubleZed()
 		myHero:MoveTo(mousePos.x, mousePos.z)
 		if not target then return end
 		if Rready  and GetDistance(target)< VARS.W.DMGrange and target then
+			local bestPos, enemyCount = GetBestAOEPosition(myEnemyTable, VARS.W.range, VARS.W.width, myHero)
 			if Wready and not CanIBack then
-				CastW(target)
+				CastSpell(_W, bestPos.x, bestPos.z)
 			end
 			if Rready and Rspell == 'W' then
-				CastR(target)
+				CastSpell(_R, bestPos.x, bestPos.z)
 			end
 			
 			DelayAction(function() 
@@ -1005,6 +1148,7 @@ function safeZone()
 		end
 	end
 end
+
 --------------------------------------------- VIP Function ------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
@@ -1145,7 +1289,12 @@ function OnDraw()
 					DrawCircle3D(myHero.x, myHero.y, myHero.z, Menu.misc.safeZoneRange, 2)
 				end	
 			end
-			DrawLifeBar()
+			if Menu.draws.drawitType == 1 then
+				DrawLifeBar()
+			elseif Menu.draws.drawitType == 2 then 
+				DrawLifeBar2()
+			end
+			
 			if forcedTarget and Menu.draws.DrawTarget then
 				DrawCircle3D(forcedTarget.x, forcedTarget.y, forcedTarget.z, 50, 2)
 			end
@@ -1154,13 +1303,13 @@ end
 
 function OnCreateObj(object)
 		 if object.name== "LeBlanc_Base_P_Image.troy" then
-			SendMsg("up")
+			--SendMsg("up")
 			 clone = object
 			 PassiveUp = true
 			
 		 end
 		 if object.name=="LeBlanc_Base_P_imageDeath.troy" then
-			 SendMsg("down")
+			 --SendMsg("down")
 			 clone = nil
 			 PassiveUp = false
 		 end
@@ -1178,14 +1327,19 @@ function OnWndMsg(key , msg)
     if enemySelected and GetDistanceSqr(enemySelected, mousePos) < 40000 then
       if forcedTarget and enemySelected.networkID == forcedTarget.networkID then
         forcedTarget = nil
-		if(Menu.TargetSelector.useChat) then
+		if(Menu.TargetSelector.annouce == 1) then
 			SendMsg("Deselected target: " .. enemySelected.charName)
+		elseif (Menu.TargetSelector.annouce == 2) then
+			SendNotification("Target Selector","Deselected target: " .. enemySelected.charName , 10)				
 		end
       else
         forcedTarget = enemySelected
-		if(Menu.TargetSelector.useChat) then
+		if(Menu.TargetSelector.annouce == 1) then
 			SendMsg("Selected target: " .. enemySelected.charName)
+		elseif (Menu.TargetSelector.annouce == 2) then
+			SendNotification("Target Selector","Selected target: " .. enemySelected.charName , 10)
 		end
+		
         forcedTargetTime = os.clock()
       end
     end
@@ -1212,6 +1366,7 @@ end
 
 
 function OnLoad()
+	LoadNotificationLib()
  --UPL FIN
 	if not _G.UPLloaded then
 	  if FileExist(LIB_PATH .. "/UPL.lua") then
@@ -1225,6 +1380,7 @@ function OnLoad()
 	end
 --UPL FIN
 	AutoUpdater()
+	
 	Variables()
 	DrawMenu()
 	Menu.TargetSelector:addTS(ts)
