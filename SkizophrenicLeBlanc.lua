@@ -1,5 +1,5 @@
 --[[
-version = 0.05
+version = 0.05.1
 author = "Mr-Skizo"
 SCRIPT_NAME = "SkizophrenicLeBlanc"
 ]]
@@ -9,9 +9,9 @@ if myHero.charName ~= "Leblanc" then return end
 --------------------------------------------- Auto Update -------------------------------------------
 -----------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------
-local version = 0.05
+local version = 0.05.1
 local author = "Mr-Skizo"
-local last_update = "13/04/2016"
+local last_update = "14/04/2016"
 
 function AutoUpdater()
 	local AUTOUPDATE = true
@@ -1361,7 +1361,9 @@ function OnTick()
 	clonecontrole()
 	ephemeralTarget()
 	safeZone()
+	if VIP_USER then
 	AutoLvlUp()
+	end
 end 
 
 
